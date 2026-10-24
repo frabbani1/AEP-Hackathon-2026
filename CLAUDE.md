@@ -8,8 +8,10 @@ AI Outage Concierge, HackOHI/O 2026 AEP challenge (team: Faiz Rabbani, Parker Mi
 A customer picks an anonymized location before a storm and asks: Will I lose power? How long could
 restoration take? What should I do? Do I qualify for alerts? Challenge text: `docs/challenge.md`.
 
-Status: backend only. `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, the labor-mapping
-review, is open) and `spec-02-risk-engine` are implemented. No frontend, API, Bedrock or CDK code exists yet.
+Status: `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, the labor-mapping
+review, is open) and `spec-02-risk-engine` are implemented. The frontend has two pages (chat home at `/`, outage
+map at `/map`, see `frontend/`) running on a mock client. The map page shows clearly labeled sample data
+(`frontend/src/api/sample/`), not engine output. No API, Bedrock or CDK code exists yet.
 The two backends do not talk to each other yet (see "Circuit keys" and `pipeline/README.md`). Work is driven by
 OpenSpec changes in `openspec/changes/`.
 
@@ -40,6 +42,7 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `curated/` | Pipeline output (gitignored): `server/` (never to a browser), `public/` (zone level, browser-safe), `reports/` |
 | `backend/concierge/risk/` | Risk engine: loaders, storms, features, calibration, confidence, explanation, engine, build. Reads `data/` directly, not `curated/` |
 | `backend/tests/risk/` | Unit, property (hypothesis), synthetic-fixture, integration, and real-data tests |
+| `frontend/` | React + TS + Vite, styled after aepohio.com. Pages: chat home and outage map (Leaflet). `src/api/types.ts` is the API contract; `src/api/mockClient.ts` is the stub to replace; `src/api/sample/` is placeholder map data to delete. `VITE_BASEMAP_URL` (empty = no tiles) sets the map background. `npm run dev` / `npm run build` |
 | `backend/concierge/curate/` | Data curation: raw files -> clean Parquet/JSON tables (`artifacts/curated/`) |
 | `scripts/curate.py` | Runs the curation pipeline (about 5 s) |
 | `scripts/build_risk_artifacts.py` | Builds `artifacts/risk/` (gitignored) from `data/` |
@@ -71,6 +74,9 @@ Never modify files under `data/`. Write derived outputs elsewhere (e.g. `artifac
 - Customer_Clip: 117,642 rows; `premise_nu` joins 117,595 topology premises. `kind_of_se`:
   Overhead 64,824, Underground 52,419, Unknown 399. Circuit sizes range from 4 to ~3,500 premises.
 - Facility layers (hospital, fire, ambulance) are EPSG:3857; everything else WGS84.
+- Geography: shapefile header extents of the customer, pole, primary and ARCOS layers span about 37.0 to 37.5 N and
+  79.6 to 80.3 W. That is south of Ohio's southern edge; the basemap labels there read Roanoke, Salem, Blacksburg
+  (Virginia). The frontend header and copy say "Ohio Power Company". Decide whether that is intended.
 
 ## Privacy rules (non-negotiable)
 

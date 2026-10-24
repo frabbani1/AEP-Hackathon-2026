@@ -1,0 +1,105 @@
+.scope {
+  background-color: #fff;
+  border-bottom: 1px solid var(--aep-gray-border);
+}
+
+.scope__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.scope__form {
+  min-width: 0;
+}
+
+.scope__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.scope__row {
+  display: flex;
+  gap: 10px;
+  max-width: 40rem;
+}
+
+.scope__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.scope__hint {
+  margin: 6px 0 0;
+  font-size: 0.875rem;
+  color: var(--aep-text-muted);
+}
+
+.scope__error {
+  margin: 6px 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--aep-red-heading);
+}
+
+.scope__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin: 0;
+  padding: 4px 6px 4px 12px;
+  font-weight: 400;
+  background-color: var(--aep-gray-light);
+  border: 1px solid var(--aep-gray);
+  border-radius: 10rem;
+}
+
+.scope__chip svg {
+  flex: none;
+  color: var(--aep-red);
+}
+
+.scope__chip strong {
+  font-weight: 600;
+}
+
+.scope__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--aep-text);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+}
+
+.scope__clear:hover {
+  background-color: var(--aep-gray-border);
+}
+
+@media (min-width: 768px) {
+  .scope__inner {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .scope__form {
+    flex: 0 1 40rem;
+  }
+
+  /* Line the chip up with the input row (label is 1.5rem tall + 6px gap). */
+  .scope__chip {
+    margin-top: 30px;
+  }
+}

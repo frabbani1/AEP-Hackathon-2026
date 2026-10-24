@@ -1,0 +1,71 @@
+.composer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  padding: 12px 0 10px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 18px);
+}
+
+.composer__inner {
+  max-width: 880px;
+}
+
+.composer__box {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  background-color: #fff;
+  border: 1px solid var(--aep-gray);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition:
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
+}
+
+.composer__box:focus-within {
+  border-color: var(--aep-focus-border);
+  box-shadow: var(--aep-focus-ring);
+}
+
+.composer__input {
+  flex: 1;
+  min-width: 0;
+  max-height: 200px;
+  padding: 8px 0;
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.4;
+  resize: none;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.composer__input::placeholder {
+  color: #6c757d;
+  opacity: 1;
+}
+
+.composer__send {
+  flex: none;
+  width: 44px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.composer__send:disabled {
+  color: #6c757d;
+  background-color: var(--aep-gray-light);
+  border-color: var(--aep-gray-light);
+  opacity: 1;
+}
+
+.composer__note {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--aep-text-muted);
+}

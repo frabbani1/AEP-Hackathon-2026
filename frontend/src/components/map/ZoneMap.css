@@ -1,0 +1,102 @@
+.zone-map {
+  position: relative;
+  /* Keep Leaflet's internal z-indexes from covering the header menu. */
+  isolation: isolate;
+}
+
+.zone-map__canvas {
+  width: 100%;
+  height: clamp(340px, 62vh, 640px);
+  background-color: #e9edf0;
+  border: 1px solid var(--aep-gray);
+  border-radius: 0.25rem;
+}
+
+.zone-map__canvas:focus-visible {
+  outline: 3px solid var(--aep-blue-dark);
+  outline-offset: 2px;
+}
+
+.zone-map__notice {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  z-index: 800;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 4px 12px;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  transform: translateX(-50%);
+  background-color: #fff;
+  border: 1px solid var(--aep-gray);
+  border-radius: 10rem;
+}
+
+/* Area labels: number over band, readable on any fill. */
+.zone-label {
+  background: transparent;
+  border: 0;
+}
+
+.zone-label__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 1.05;
+  color: #111;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff,
+    0 0 5px #fff;
+  pointer-events: none;
+}
+
+.zone-label__name {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.zone-label__band {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.zone-tip.leaflet-tooltip {
+  font-family: var(--font);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--aep-text);
+}
+
+/* Larger zoom buttons and attribution links, to match the 44px touch targets used elsewhere. */
+.zone-map .leaflet-bar a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  line-height: 1;
+  color: var(--aep-text);
+}
+
+.zone-map .leaflet-control-attribution {
+  font-family: var(--font);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.zone-map .leaflet-control-attribution a {
+  color: var(--aep-blue-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zone-map .leaflet-zoom-anim .leaflet-zoom-animated {
+    transition: none;
+  }
+}

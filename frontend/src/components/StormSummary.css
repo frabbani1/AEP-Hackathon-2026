@@ -1,0 +1,184 @@
+/* Mirrors the grey "task bar" band on the aepohio.com home page. */
+
+.summary {
+  background-color: var(--aep-gray-light);
+  border-bottom: 1px solid var(--aep-gray);
+}
+
+.summary__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.summary__title {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.summary__badge {
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--aep-text);
+  text-transform: uppercase;
+  background-color: var(--aep-orange-tint);
+  border: 1px solid var(--aep-orange);
+  border-radius: 10rem;
+}
+
+.summary__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 4px;
+  font-weight: 600;
+  color: var(--aep-blue-dark);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.summary__toggle:hover {
+  color: var(--aep-blue-darker);
+  text-decoration: underline;
+}
+
+.summary__chevron {
+  transition: transform 0.15s ease-in-out;
+}
+
+.summary__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.summary__body {
+  padding-bottom: 20px;
+}
+
+.summary__body[hidden] {
+  display: none;
+}
+
+.summary__status {
+  margin: 0;
+  color: var(--aep-text-muted);
+}
+
+.summary__headline {
+  max-width: 62rem;
+  margin: 0 0 16px;
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.summary__events {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary__event {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--aep-gray);
+}
+
+.summary__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--event-color);
+  background-color: #fff;
+  border: 2px solid var(--event-color);
+  border-radius: 50%;
+}
+
+.summary__event--storm {
+  --event-color: var(--aep-blue-dark);
+}
+
+.summary__event--outage {
+  --event-color: var(--aep-orange);
+}
+
+.summary__event--restoration {
+  --event-color: #00828c; /* darker teal so the icon keeps contrast on white */
+}
+
+.summary__event--safety {
+  --event-color: var(--aep-red);
+}
+
+.summary__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.summary__event-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.22;
+  text-transform: uppercase;
+}
+
+.summary__event-detail {
+  margin-top: 2px;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--aep-text-muted);
+}
+
+@media (min-width: 576px) {
+  .summary__events {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary__event:nth-child(even) {
+    padding-left: 20px;
+    border-left: 1px solid var(--aep-gray);
+  }
+}
+
+@media (min-width: 1024px) {
+  .summary__head {
+    padding: 16px 0;
+  }
+
+  .summary__title {
+    font-size: 1.5rem;
+  }
+
+  .summary__events {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .summary__event {
+    padding: 4px 20px;
+    border-top: 0;
+    border-left: 1px solid var(--aep-gray);
+  }
+
+  .summary__event:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .summary__event:nth-child(even) {
+    padding-left: 20px;
+  }
+}
