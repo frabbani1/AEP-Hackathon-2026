@@ -1,48 +1,43 @@
 import { useEffect, useRef } from "react";
 import { conciergeClient } from "./api";
-import { ChatThread } from "./components/ChatThread";
-import { Composer } from "./components/Composer";
-import { LocationScope } from "./components/LocationScope";
+import { AppNav } from "./components/AppNav";
 import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
-import { StormSummary } from "./components/StormSummary";
 import { useChat } from "./hooks/useChat";
-import { useEventSummary } from "./hooks/useEventSummary";
+import { useRoute, type RoutePath } from "./lib/useRoute";
+import { ChatPage } from "./pages/ChatPage";
+import { MapPage } from "./pages/MapPage";
 import "./App.css";
 
+const TITLES: Record<RoutePath, string> = {
+  "/": "Outage Concierge | Ohio Power Company",
+  "/map": "Outage map | Outage Concierge",
+};
+
 export default function App() {
-  const { messages, location, pending, send, setLocation } = useChat(conciergeClient);
-  const summary = useEventSummary(conciergeClient, location);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const { path, navigate } = useRoute();
+  // Chat state lives here so the conversation and location survive a visit to the map.
+  const chat = useChat(conciergeClient);
 
-  // Keep the newest message in view. The composer is sticky, so scroll the page itself.
-  const messageCount = messages.filter((message) => message.role !== "notice").length;
+  // On each page change: set the title, and move to the top and into the new page's main
+  // landmark so keyboard and screen reader users start in the right place.
+  const shownPath = useRef(path);
   useEffect(() => {
-    if (messageCount === 0 && !pending) return;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: reduceMotion ? "auto" : "smooth",
-    });
-  }, [messageCount, pending]);
-
-  const handlePrompt = (question: string) => {
-    void send(question);
-    composerRef.current?.focus();
-  };
+    document.title = TITLES[path];
+    if (shownPath.current === path) return;
+    shownPath.current = path;
+    window.scrollTo(0, 0);
+    document.getElementById("main")?.focus({ preventScroll: true });
+  }, [path]);
 
   return (
     <div className="app">
       <a className="skip-link" href="#main">
-        Skip to chat
+        Skip to main content
       </a>
       <SiteHeader />
-      <StormSummary state={summary} />
-      <LocationScope location={location} onChange={setLocation} />
-      <main id="main" className="app__main" tabIndex={-1}>
-        <ChatThread messages={messages} pending={pending} onPrompt={handlePrompt} />
-        <Composer location={location} pending={pending} inputRef={composerRef} onSend={(text) => void send(text)} />
-      </main>
+      <AppNav path={path} onNavigate={navigate} />
+      {path === "/map" ? <MapPage /> : <ChatPage chat={chat} />}
       <SiteFooter />
     </div>
   );

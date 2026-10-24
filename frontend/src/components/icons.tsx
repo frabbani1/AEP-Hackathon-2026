@@ -95,3 +95,54 @@ export const ChevronIcon = (p: IconProps) => (
     <path d="m6 9 6 6 6-6" />
   </Icon>
 );
+
+export const MapIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m9 5-5.5 2v12L9 17m0-12 6 2m-6-2v12m6-10 5.5-2v12L15 19m0-12v12m0 0-6-2" />
+  </Icon>
+);
+
+export const ChatIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4.5 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />
+  </Icon>
+);
+
+export const CheckIcon = (p: IconProps) => (
+  <Icon {...p} strokeWidth={2.25}>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </Icon>
+);
+
+export const ArrowDownIcon = (p: IconProps) => (
+  <Icon {...p} strokeWidth={2.25}>
+    <path d="M12 5v14" />
+    <path d="m6 13 6 6 6-6" />
+  </Icon>
+);
+
+export const InfoIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5.5" />
+    <path d="M12 7.75v.01" />
+  </Icon>
+);
+
+export const MinusIcon = (p: IconProps) => (
+  <Icon {...p} strokeWidth={2.25}>
+    <path d="M6 12h12" />
+  </Icon>
+);
+
+export const PlusIcon = (p: IconProps) => (
+  <Icon {...p} strokeWidth={2.25}>
+    <path d="M12 6v12M6 12h12" />
+  </Icon>
+);
+
+export const PhoneIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5.5 5.5L16 13l4 1.5v3a2 2 0 0 1-2 2A14 14 0 0 1 4.5 6a2 2 0 0 1 2-2z" />
+  </Icon>
+);

@@ -1,0 +1,44 @@
+/* Sub-navigation between the Concierge pages, in the grey band style used on aepohio.com. */
+
+.appnav {
+  background-color: var(--aep-gray-light);
+  border-bottom: 1px solid var(--aep-gray-border);
+}
+
+.appnav__list {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.appnav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--aep-text);
+  text-transform: uppercase;
+  border-bottom: 4px solid transparent;
+}
+
+.appnav__link:hover {
+  color: var(--aep-red-heading);
+  text-decoration: none;
+}
+
+.appnav__link[aria-current="page"] {
+  color: var(--aep-red-heading);
+  border-bottom-color: var(--aep-red);
+}
+
+@media (max-width: 479px) {
+  .appnav__link {
+    padding: 0 8px;
+    font-size: 0.875rem;
+  }
+}

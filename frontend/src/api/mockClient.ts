@@ -1,14 +1,21 @@
+import { sampleAssessment, sampleMapZones } from "./sample/assessment";
 import type { AskRequest, AssistantReply, ConciergeClient, EventSummary } from "./types";
 
 /**
  * Stand-in for the Concierge API, which is not built yet.
  *
- * It returns static, number-free placeholder content so the page can be
- * exercised end to end. It deliberately does NOT invent risk levels, restoration
- * times or alert eligibility: those must come from the deterministic engine.
+ * The chat methods return static, number-free placeholder content. They deliberately
+ * do NOT invent risk levels, restoration times or alert eligibility.
+ *
+ * The map methods are the exception: the map page needs something to color and
+ * recompute, so they return clearly labeled `source: "sample"` data from
+ * `./sample/assessment`. That data is placeholder only and must never be shown as a
+ * real prediction. The real numbers must come from the deterministic engine.
  */
 
 const LATENCY_MS = 600;
+const MAP_LATENCY_MS = 350;
+const ASSESSMENT_LATENCY_MS = 450;
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -64,6 +71,18 @@ export const mockClient: ConciergeClient = {
         },
       ],
     };
+  },
+
+  async getMapZones({ severity }, signal) {
+    await wait(MAP_LATENCY_MS, signal);
+    return sampleMapZones(severity);
+  },
+
+  async getZoneAssessment(request, signal) {
+    await wait(ASSESSMENT_LATENCY_MS, signal);
+    const assessment = sampleAssessment(request);
+    if (!assessment) throw new Error("Unknown area");
+    return assessment;
   },
 
   async ask({ location }: AskRequest, signal): Promise<AssistantReply> {

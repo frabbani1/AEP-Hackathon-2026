@@ -28,6 +28,23 @@
   --aep-gray-border: #dcdcdc;
   --aep-input-border: #ced4da;
 
+  /* Risk bands (outage map). Fill colors are for shapes; ink and tint are for text and pills.
+     Level is always also shown in words and a bar meter, never by color alone. */
+  --band-low: #009cde;
+  --band-low-ink: #012c4a;
+  --band-low-tint: #d9f0fb;
+  --band-medium: #df6d00;
+  --band-medium-ink: #4a2300;
+  --band-medium-tint: #fcebd2;
+  --band-high: #da291c;
+  --band-high-ink: #6e0f08;
+  --band-high-tint: #f8d4d2;
+  --band-none: #9e9fa1;
+  --band-none-ink: #2d2d2d;
+  --band-none-tint: #f3f3f3;
+  --zone-outline: #ffffff;
+  --zone-selected: #012c4a;
+
   /* Focus (form-control focus state on aepohio.com) */
   --aep-focus-border: #5fcfff;
   --aep-focus-ring: 0 0 0 0.2rem rgba(0, 156, 222, 0.25);
