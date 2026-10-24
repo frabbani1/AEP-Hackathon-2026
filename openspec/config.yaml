@@ -1,32 +1,48 @@
 schema: spec-driven
 
-# Project context (optional)
-# Add only constraints that should guide OpenSpec artifacts and workflows.
-# Include constraints an agent cannot infer by reading the code.
-# Keep general project documentation and discoverable codebase facts out.
-# Example:
-#   context: |
-#     Designs and tasks must cover Windows, macOS, and Linux
-#     Write all artifacts in Spanish
+context: |
+  Project: HackOHI/O 2026 - AEP AI Outage Concierge.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always state what is out of scope
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Goal:
+  Build an AWS-native web application that predicts
+  outage risk, estimates restoration duration, explains
+  predictions, provides preparation guidance, and
+  generates proactive customer communications.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Data:
+  - All provided datasets are in /data at repo root.
+  - Inspect actual files and schemas before designing models.
+  - Do not assume every challenge-described field exists.
+  - Preserve original datasets.
+  - Avoid exposing sensitive or internal-only data.
+
+  Architecture:
+  - Frontend: React, TypeScript, Vite
+  - Hosting: AWS Amplify
+  - API: Amazon API Gateway HTTP API
+  - Backend: Python AWS Lambda
+  - AI: Amazon Bedrock
+  - Geospatial: GeoPandas, MapLibre, Amazon Location
+  - Graph processing: NetworkX
+  - Storage: Amazon S3
+  - Persistence: DynamoDB only when necessary
+  - Infrastructure: AWS CDK (TypeScript)
+
+  Constraints:
+  - AWS budget: $100-$300
+  - Prefer serverless, pay-per-use infrastructure.
+  - Separate predictive calculations from generative AI.
+  - Make model assumptions and uncertainty explicit.
+  - Prioritize a working hackathon demonstration.
+  - Do not deploy cloud resources without review.
+
+rules:
+  proposal:
+    - Define scope and exclusions.
+    - Explain the customer-visible outcome.
+  design:
+    - Document API contracts and data dependencies.
+    - Identify privacy and operational limitations.
+  tasks:
+    - Use small, testable implementation steps.
+    - Include validation and integration tests.
