@@ -8,8 +8,9 @@ AI Outage Concierge, HackOHI/O 2026 AEP challenge (team: Faiz Rabbani, Parker Mi
 A customer picks an anonymized location before a storm and asks: Will I lose power? How long could
 restoration take? What should I do? Do I qualify for alerts? Challenge text: `docs/challenge.md`.
 
-Status: backend only. `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, the labor-mapping
-review, is open) and `spec-02-risk-engine` are implemented. No frontend, API, Bedrock or CDK code exists yet.
+Status: `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, the labor-mapping
+review, is open) and `spec-02-risk-engine` are implemented. The frontend has one page (chat home, see `frontend/`)
+running on a mock client. No API, Bedrock or CDK code exists yet.
 The two backends do not talk to each other yet (see "Circuit keys" and `pipeline/README.md`). Work is driven by
 OpenSpec changes in `openspec/changes/`.
 
@@ -40,6 +41,7 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `curated/` | Pipeline output (gitignored): `server/` (never to a browser), `public/` (zone level, browser-safe), `reports/` |
 | `backend/concierge/risk/` | Risk engine: loaders, storms, features, calibration, confidence, explanation, engine, build. Reads `data/` directly, not `curated/` |
 | `backend/tests/risk/` | Unit, property (hypothesis), synthetic-fixture, integration, and real-data tests |
+| `frontend/` | React + TS + Vite chat home page styled after aepohio.com. `src/api/types.ts` is the API contract; `src/api/mockClient.ts` is the stub to replace. `npm run dev` / `npm run build` |
 | `scripts/build_risk_artifacts.py` | Builds `artifacts/risk/` (gitignored) from `data/` |
 | `data/Install_Labor_HackOHIO.xlsx` | Labor hours per unit, access adders, indirect multiplier (4.5) |
 

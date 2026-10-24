@@ -12,6 +12,9 @@ pipeline/.pytest_cache/
 
 # derived build outputs (may be large; regenerate with scripts/build_risk_artifacts.py)
 artifacts/
+# frontend
+frontend/node_modules/
+frontend/dist/
 __pycache__/
 .pytest_cache/
 .hypothesis/
