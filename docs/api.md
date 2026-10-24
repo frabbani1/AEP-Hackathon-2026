@@ -1,0 +1,75 @@
+# API reference
+
+Base URL: the `ApiUrl` output of `make deploy` (also in `infra/cdk-outputs.json`). Every route is also served under
+`/api/...`, so a frontend on the CloudFront domain can call same-origin paths such as `POST /api/summary`.
+
+**No authentication.** This is a demo API on the public internet. It only accepts opaque premise tokens and returns
+whitelisted fields, and a light throttle (50 requests/s, burst 100) is set. Put an authorizer in front of it before
+any real use.
+
+All routes take JSON. Unknown fields are rejected with `400`. Bodies over 8 KB are rejected with `413`.
+Errors look like `{"error": {"code": "bad_request", "message": "..."}}`.
+
+| Route | Body | Returns |
+| --- | --- | --- |
+| `GET /health` | none | status, engine hash, message model |
+| `POST /risk` | `token`, `severity?` | risk band, score, confidence, top factors, assumptions, fallback |
+| `POST /restoration` | `token`, `severity?`, `crews?`, `access?`, `damage?` | restoration range, step-by-step stages, what-if changes, assumptions |
+| `POST /guidance` | `token`, `severity?`, `needs?`, plus restoration inputs | preparation list with safety items first |
+| `POST /alerts` | `token`, `severity?`, `needs?`, `channels?`, `prior_typical_hours?`, plus restoration inputs | eligibility per message type, timing, channels, escalation recommendations |
+| `POST /messages` | `token`, `message_type`, `channel?`, `severity?`, `needs?`, `use_llm?`, `prior_estimate?` | one customer message and how it was produced |
+| `POST /summary` | same as `/alerts` | risk + restoration + guidance + alerts in one call (one DynamoDB read) |
+
+Inputs
+
+- `token`: `p_` plus 16 hex characters (an opaque premise token from the clean tables).
+- `severity`: `sep-2024-like`, `typical` (default), `feb-2025-like`, `beyond-observed`, or a number from 0.25 to 3.0.
+- `crews`: whole number 1 to 100 (default 3). `access`: `normal` (default), `restricted`, `remote`.
+- `damage`: optional list of `{"asset_type", "qty"}` (qty 1 to 20, up to 10 items). `asset_type` is one of
+  `primary_line`, `secondary_line`, `pole`, `fuse_bank`, `transformer`, `recloser`, `switch`, `capacitor_bank`,
+  `light`, `step_transformer`. When given, only that damage is counted.
+- `needs`: `{"medical_equipment", "mobility_limited", "electric_heat_or_cooling"}`, each true or false. Declared by
+  the customer, never inferred.
+- `message_type`: `pre_storm`, `outage_confirmed`, `estimate_updated`, `restoration_complete`.
+  `channel`: `sms` (default), `push`, `email`, `voice`.
+- `prior_estimate`: `{"low_hours", "high_hours"}` for `estimate_updated`.
+
+Example
+
+```bash
+curl -s -X POST "$API/summary" -H 'content-type: application/json' \
+  -d '{"token":"p_0123456789abcdef","severity":"feb-2025-like","crews":6,"needs":{"medical_equipment":true}}'
+```
+
+## How the numbers are produced
+
+Every number comes from deterministic Python. The language model only phrases `/messages` output.
+
+- **Risk** (`concierge/risk`): circuit-level historical damage per 1,000 homes, adjusted for service type and position on
+  the line, scaled by the storm scenario. It is a susceptibility rating, not a forecast, and says so in `label`.
+- **Restoration** (`concierge/restoration/model.py`): expected damage on the customer's line, split into main line,
+  branch and near-home repairs using the historical asset mix. Each repair costs the STORMS install + removal hours
+  (plus an access adder), times the 4.5 indirect-labor multiplier. Crews work 16 of every 24 hours, upstream first, so
+  `steps` shows when each stage finishes. The range widens when the evidence is thinner. The asset-to-hardware
+  mapping and the 16-hour working day are assumptions that need utility review. The response always says it is a model
+  estimate, not confirmed utility information.
+- **Guidance** (`concierge/guidance`): fixed rule library. Safety items are always first and marked `safety: true`.
+- **Alerts** (`concierge/alerts`): documented rules R1 to R10 with the rule id and reason in every decision.
+  Escalations are recommendations for a person, never automatic actions.
+- **Messages** (`concierge/messages`): code builds a fact card; the model (Amazon Nova 2 Lite on Bedrock) rewrites it;
+  a guard then checks the draft. Any number not in the fact card, link, promise, weather claim, claim about the past,
+  or over-length text sends the request back to the fixed template. A Bedrock error does the same. The 911 safety line
+  is appended by code after the guard.
+
+## What is never returned
+
+Raw premise numbers, addresses, coordinates, circuit or device identifiers, life-support flags, and the exposure
+weights the restoration model uses (`cn`, `n0`, `nl`, `nf`). Responses are scanned for identifier-like text before
+they leave the Lambda.
+
+## Limits
+
+- Restoration damage is simulated from only two past storms. Damage reports show repairs, not which homes lost power.
+- Premises on very small lines, or with no damage history, return `status: insufficient_data` with a plain-language
+  fallback instead of a number.
+- No weather data, live crew locations or road conditions are used.

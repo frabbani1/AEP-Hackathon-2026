@@ -1,14 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ai-outage-concierge"
 version = "0.1.0"
 description = "HackOHI/O 2026 AEP challenge: AI Outage Concierge"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pyarrow==26.0.0",   # Parquet
+    "pyshp==3.1.6",      # shapefiles
+    "pyproj==3.7.2",     # EPSG:3857 -> WGS84
+    "openpyxl==3.1.5",   # labor workbook
+    "h3==4.5.0",         # hex cells
+]
 
 [project.optional-dependencies]
 dev = [
     "pytest==9.1.1",
     "hypothesis==6.170.9",
+]
+aws = [
+    "boto3==1.43.118",   # only needed to run scripts/load_dynamodb.py --apply
 ]
 
 [tool.pytest.ini_options]
@@ -17,3 +30,7 @@ testpaths = ["backend/tests"]
 markers = [
     "realdata: runs against the real files in data/ (needs CONCIERGE_TOKEN_SALT; slow)",
 ]
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["concierge*"]

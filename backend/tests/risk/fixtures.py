@@ -33,11 +33,17 @@ def write_dbf(path: Path, fields: list[tuple[str, str, int]], rows: list[dict]) 
     path.write_bytes(bytes(out))
 
 
+def label_of(circuit: int) -> str:
+    """ARCOS/GIS label for a circuit. Deliberately NOT the circuit number (real data: CIR2 is circuit 16)."""
+    return f"CIR{circuit + 1}"
+
+
 @dataclass
 class Synth:
     customer_dbf: Path
     arcos_dbf: Path
     topology_txt: Path
+    device_dbfs: list
     premise_ids: list[str]
     life_support_ids: list[str]
     no_chain_ids: list[str]
@@ -57,7 +63,7 @@ def _topology_line(pid: str, circuit: int, protective: int, hops: int) -> str:
     return "\t".join([pid, *devices])
 
 
-def make_synth(tmp: Path, *, reverse_s2: bool = False) -> Synth:
+def make_synth(tmp: Path, *, reverse_s2: bool = False, unlabelled: frozenset[int] = frozenset()) -> Synth:
     tmp.mkdir(parents=True, exist_ok=True)
     s2 = list(reversed(MAIN_S2)) if reverse_s2 else MAIN_S2
 
@@ -115,14 +121,21 @@ def make_synth(tmp: Path, *, reverse_s2: bool = False) -> Synth:
             rows.append({"Circuit": circuit_label, "Report_Tim": days[(j + offset) % len(days)].strftime("%Y%m%d")})
 
     for idx, c in enumerate(MAIN_IDS):
-        add(f"CIR{c}", storm_days[0], MAIN_S1[idx])
-        add(f"CIR{c}", storm_days[1], s2[idx])
-    add(f"CIR{FILLER_ID}", storm_days[0], 80)
-    add(f"CIR{FILLER_ID}", storm_days[1], 60)
+        add(label_of(c), storm_days[0], MAIN_S1[idx])
+        add(label_of(c), storm_days[1], s2[idx])
+    add(label_of(FILLER_ID), storm_days[0], 80)
+    add(label_of(FILLER_ID), storm_days[1], 60)
     add("", storm_days[0], 3)                         # no circuit key, inside a storm
+    add("TINKER", storm_days[0], 2)                   # label that no device layer knows about
     for d in (date(2024, 6, 1), date(2024, 6, 2), date(2025, 5, 31)):
-        add(f"CIR{MAIN_IDS[2]}", [d], 2)              # background noise outside storm windows
+        add(label_of(MAIN_IDS[2]), [d], 2)              # background noise outside storm windows
     write_dbf(tmp / "arcos.dbf", [("Circuit", "C", 20), ("Report_Tim", "D", 8)], rows)
 
-    return Synth(tmp / "Customer_Clip.dbf", tmp / "arcos.dbf", tmp / "matched_upstream.txt", premise_ids,
+    # Device layer carrying both circuit_id and the shifted label (the crosswalk source)
+    dev_rows = [{"circuit_id": f"{c:07d}", "aep_circui": label_of(c)}
+                for c in [*sizes, FILLER_ID] for _ in range(3) if c not in unlabelled]
+    write_dbf(tmp / "Fuse_Bank_Clip.dbf", [("circuit_id", "C", 32), ("aep_circui", "C", 64)], dev_rows)
+
+    return Synth(tmp / "Customer_Clip.dbf", tmp / "arcos.dbf", tmp / "matched_upstream.txt",
+                 [tmp / "Fuse_Bank_Clip.dbf"], premise_ids,
                  life_support, no_chain, unknown_service, circuit_of, chain_of, service_of)

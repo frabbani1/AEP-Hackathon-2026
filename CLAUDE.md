@@ -40,7 +40,11 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `curated/` | Pipeline output (gitignored): `server/` (never to a browser), `public/` (zone level, browser-safe), `reports/` |
 | `backend/concierge/risk/` | Risk engine: loaders, storms, features, calibration, confidence, explanation, engine, build. Reads `data/` directly, not `curated/` |
 | `backend/tests/risk/` | Unit, property (hypothesis), synthetic-fixture, integration, and real-data tests |
+| `backend/concierge/curate/` | Data curation: raw files -> clean Parquet/JSON tables (`artifacts/curated/`) |
+| `scripts/curate.py` | Runs the curation pipeline (about 5 s) |
 | `scripts/build_risk_artifacts.py` | Builds `artifacts/risk/` (gitignored) from `data/` |
+| `scripts/aws_publish.sh`, `scripts/load_dynamodb.py` | Upload to S3 / load DynamoDB. Dry run unless `APPLY=1` / `--apply` |
+| `docs/data-cleaning.md`, `docs/aws-setup.md` | Cleaning rules; step-by-step AWS setup |
 | `data/Install_Labor_HackOHIO.xlsx` | Labor hours per unit, access adders, indirect multiplier (4.5) |
 
 Never modify files under `data/`. Write derived outputs elsewhere (e.g. `artifacts/`).
