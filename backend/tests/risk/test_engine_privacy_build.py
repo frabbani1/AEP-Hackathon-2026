@@ -26,8 +26,31 @@ def test_build_finds_two_storms_and_counts(built, synth):
     assert c["circuits"] == 15 and c["premises"] == len(synth.premise_ids) + len(synth.no_chain_ids)
     assert c["fallbacks"]["circuit_too_small"] == 30 and c["fallbacks"]["no_circuit"] == 5
     assert c["excluded_records"]["no_circuit_key"] == 3 and c["excluded_records"]["outside_storm_windows"] == 6
+    assert c["excluded_records"]["label_not_in_crosswalk"] == 2 and c["unmapped_circuits"] == 0
     assert cal["backtest"]["gate"] == {"monotone": True, "override": False}
     assert cal["thresholds"]["medium"] < cal["thresholds"]["high"]
+
+
+def test_damage_lands_on_the_right_circuit_via_crosswalk(built, synth, tok):
+    """Labels are shifted (circuit 22 is labelled CIR23). Records must follow the crosswalk, not the digits."""
+    from .fixtures import MAIN_IDS, MAIN_S1, MAIN_S2
+    rows = {r["t"]: r for r in load_rows(built[0])}
+    for idx, c in enumerate(MAIN_IDS):
+        pid = next(p for p in synth.premise_ids if synth.circuit_of[p] == c)
+        r = rows[tok(pid)]
+        expected = MAIN_S1[idx] + MAIN_S2[idx]
+        if expected == 0:
+            assert r["st"] == "fb"
+        else:
+            assert r["n"] == expected, f"circuit {c}"
+
+
+def test_circuit_without_a_label_is_unmapped_fallback(tmp_path):
+    s = make_synth(tmp_path / "unl", unlabelled=frozenset({MAIN_IDS[-1]}))
+    out = tmp_path / "o"
+    cal = build_artifacts(customer_dbf=s.customer_dbf, arcos_dbf=s.arcos_dbf, topology_txt=s.topology_txt,
+                          device_dbfs=s.device_dbfs, out_dir=out, salt=SALT, allow_non_monotone=True)
+    assert cal["counts"]["unmapped_circuits"] == 1 and cal["counts"]["fallbacks"]["circuit_unmapped"] == 100
 
 
 def test_every_band_has_evidence(built):
@@ -41,14 +64,15 @@ def test_every_band_has_evidence(built):
 def test_build_is_deterministic(synth, built, tmp_path):
     out2 = tmp_path / "again"
     cal2 = build_artifacts(customer_dbf=synth.customer_dbf, arcos_dbf=synth.arcos_dbf,
-                           topology_txt=synth.topology_txt, out_dir=out2, salt=SALT)
+                           topology_txt=synth.topology_txt, device_dbfs=synth.device_dbfs, out_dir=out2, salt=SALT)
     assert cal2["config_hash"] == built[1]["config_hash"]
     assert (out2 / "premise_risk.jsonl").read_text() == (built[0] / "premise_risk.jsonl").read_text()
 
 
 def test_non_monotone_backtest_fails_unless_overridden(tmp_path):
     s = make_synth(tmp_path / "rev", reverse_s2=True)
-    kw = dict(customer_dbf=s.customer_dbf, arcos_dbf=s.arcos_dbf, topology_txt=s.topology_txt, salt=SALT)
+    kw = dict(customer_dbf=s.customer_dbf, arcos_dbf=s.arcos_dbf, topology_txt=s.topology_txt,
+              device_dbfs=s.device_dbfs, salt=SALT)
     with pytest.raises(BacktestError):
         build_artifacts(out_dir=tmp_path / "o1", **kw)
     cal = build_artifacts(out_dir=tmp_path / "o2", allow_non_monotone=True, **kw)
@@ -251,6 +275,8 @@ def test_real_data_build(tmp_path):
         customer_dbf=DATA / "Data1" / "Customer_Clip.dbf",
         arcos_dbf=DATA / "Data1" / "arcos_prod_damage_09_28_Clip.dbf",
         topology_txt=DATA / "matched_upstream" / "matched_upstream.txt",
+        device_dbfs=[DATA / "Data1" / "Fuse_Bank_Clip.dbf", DATA / "Data2" / "Transformer_Clip.dbf",
+                     DATA / "Data2" / "Switch_Clip.dbf", DATA / "Data2" / "Recloser_Bank_Clip.dbf"],
         out_dir=tmp_path, salt=SALT)
     assert [(s["start"], s["end"]) for s in cal["storms"]] == [("2024-09-27", "2024-10-02"), ("2025-02-12", "2025-02-18")]
     assert [s["records"] for s in cal["storms"]] == [193, 1254]

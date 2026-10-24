@@ -33,6 +33,8 @@ def main() -> int:
         customer_dbf=args.data_dir / "Data1" / "Customer_Clip.dbf",
         arcos_dbf=args.data_dir / "Data1" / "arcos_prod_damage_09_28_Clip.dbf",
         topology_txt=args.data_dir / "matched_upstream" / "matched_upstream.txt",
+        device_dbfs=[args.data_dir / "Data1" / "Fuse_Bank_Clip.dbf", args.data_dir / "Data2" / "Transformer_Clip.dbf",
+                     args.data_dir / "Data2" / "Switch_Clip.dbf", args.data_dir / "Data2" / "Recloser_Bank_Clip.dbf"],
         out_dir=args.out,
         allow_non_monotone=args.allow_non_monotone,
     )

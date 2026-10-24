@@ -15,7 +15,7 @@ from . import calibrate as cal
 from .config import BANDS, DEFAULT_CONFIG, RiskConfig
 from .confidence import assess
 from .features import PremiseInput, circuit_stats, raw_score
-from .load import load_arcos, load_customers, load_topology
+from .load import load_arcos, load_crosswalk, load_customers, load_topology
 from .storms import count_days, detect_storms, storm_index
 from .tokens import get_salt, make_token
 
@@ -59,14 +59,15 @@ def _evidence(report: dict, storms, cfg: RiskConfig) -> dict:
 
 
 def build_artifacts(
-    *, customer_dbf, arcos_dbf, topology_txt, out_dir, salt: str | bytes | None = None,
+    *, customer_dbf, arcos_dbf, topology_txt, device_dbfs, out_dir, salt: str | bytes | None = None,
     cfg: RiskConfig = DEFAULT_CONFIG, allow_non_monotone: bool = False,
-    unmapped_circuits: frozenset[int] = frozenset(),
 ) -> dict:
+    """device_dbfs: the GIS device layers (fuse, transformer, switch, recloser) used to build the label crosswalk."""
     salt_b = get_salt(salt)
     customers = load_customers(customer_dbf)
     topology, topo_skipped = load_topology(topology_txt)
     arcos = load_arcos(arcos_dbf)
+    crosswalk = load_crosswalk(device_dbfs)
     premises = join_premises(topology, customers)
 
     # Storms (D5)
@@ -74,14 +75,19 @@ def build_artifacts(
     n_storms = len(storms)
 
     sizes = Counter(p.circuit for p in premises if p.circuit is not None)
+    # A topology circuit that no label maps to cannot receive damage records, so its history is unknowable.
+    unmapped_circuits = frozenset(sizes) - set(crosswalk.values())
     per_storm: list[Counter[int]] = [Counter() for _ in storms]
     excluded = Counter()
-    for d, c in arcos:
+    for d, label in arcos:
         i = storm_index(d, storms)
+        c = crosswalk.get(label) if label else None
         if i is None:
             excluded["outside_storm_windows"] += 1
-        elif c is None:
+        elif label is None:
             excluded["no_circuit_key"] += 1
+        elif c is None:
+            excluded["label_not_in_crosswalk"] += 1
         elif c not in sizes:
             excluded["circuit_not_in_topology"] += 1
         else:
@@ -165,6 +171,8 @@ def build_artifacts(
             "excluded_records": dict(sorted(excluded.items())),
             "topology_lines_skipped": topo_skipped,
             "customer_rows": len(customers),
+            "crosswalk_labels": len(crosswalk),
+            "unmapped_circuits": len(unmapped_circuits),
         },
     }
     calibration["config_hash"] = "sha256:" + hashlib.sha256(

@@ -1,0 +1,81 @@
+"""Where the API gets its data.
+
+Cloud: premise rows from DynamoDB (one GetItem per request), calibration.json and labor_standards.json from the clean
+bucket's serving/ and curated/ prefixes. Local: set PREMISE_FILE, CALIBRATION_FILE and LABOR_FILE to read the files in
+data/ instead, so the whole API can be exercised without AWS.
+"""
+from __future__ import annotations
+
+import json
+import os
+from collections import OrderedDict
+from decimal import Decimal
+from pathlib import Path
+
+CACHE_SIZE = 4096
+
+
+def _plain(v):
+    if isinstance(v, Decimal):
+        return int(v) if v == v.to_integral_value() else float(v)
+    return v
+
+
+class DynamoRows:
+    """Read-only mapping of token -> premise row, backed by DynamoDB with a small in-memory cache."""
+
+    def __init__(self, table):
+        self._table = table
+        self._cache: OrderedDict[str, dict | None] = OrderedDict()
+
+    def get(self, token, default=None):
+        if not isinstance(token, str):
+            return default
+        if token in self._cache:
+            self._cache.move_to_end(token)
+            row = self._cache[token]
+            return default if row is None else row
+        item = self._table.get_item(Key={"token": token}).get("Item")
+        row = None if item is None else {k: _plain(v) for k, v in item.items() if k != "token"}
+        self._cache[token] = row
+        if len(self._cache) > CACHE_SIZE:
+            self._cache.popitem(last=False)
+        return default if row is None else row
+
+
+class FileRows(dict):
+    """Premise rows loaded from premise_risk.jsonl (local testing)."""
+
+    @classmethod
+    def load(cls, path: str | Path) -> "FileRows":
+        rows = cls()
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                r = json.loads(line)
+                rows[r.pop("t")] = r
+        return rows
+
+
+def load_rows():
+    if os.environ.get("PREMISE_FILE"):
+        return FileRows.load(os.environ["PREMISE_FILE"])
+    import boto3
+    return DynamoRows(boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"]))
+
+
+def _s3_json(key: str) -> dict:
+    import boto3
+    body = boto3.client("s3").get_object(Bucket=os.environ["CLEAN_BUCKET"], Key=key)["Body"].read()
+    return json.loads(body)
+
+
+def load_calibration() -> dict:
+    if os.environ.get("CALIBRATION_FILE"):
+        return json.loads(Path(os.environ["CALIBRATION_FILE"]).read_text())
+    return _s3_json("serving/risk/calibration.json")
+
+
+def load_labor() -> dict:
+    if os.environ.get("LABOR_FILE"):
+        return json.loads(Path(os.environ["LABOR_FILE"]).read_text())
+    return _s3_json("curated/labor_standards.json")

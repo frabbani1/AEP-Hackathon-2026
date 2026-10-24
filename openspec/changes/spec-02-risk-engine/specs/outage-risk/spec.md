@@ -114,3 +114,24 @@ address field. Circuits with fewer than 10 premises MUST never produce a band.
 #### Scenario: Life-support flag is not loaded
 - **WHEN** the build loads the customer table
 - **THEN** only `premise_nu`, `circuit_id`, and `kind_of_se` are read
+
+### Requirement: Damage records are attributed through the circuit label crosswalk
+The build SHALL translate each ARCOS circuit label to a numeric circuit id using the label/`circuit_id` pairs in the
+device layers, and MUST NOT derive a circuit id from the digits in a label. If the layers disagree about a label, the
+build MUST fail.
+
+#### Scenario: Shifted label lands on the right circuit
+- **WHEN** an ARCOS record carries the label `CIR2` and the crosswalk maps `CIR2` to circuit 16
+- **THEN** the record counts toward circuit 16, not circuit 2
+
+#### Scenario: Unknown label is excluded and counted
+- **WHEN** an ARCOS record carries a label that is not in the crosswalk
+- **THEN** the record is excluded from every circuit and counted under `label_not_in_crosswalk`
+
+#### Scenario: Conflicting crosswalk fails the build
+- **WHEN** two device layers map the same label to different circuit ids
+- **THEN** the build raises and writes no artifacts
+
+#### Scenario: Circuit with no label is a fallback
+- **WHEN** a topology circuit has no label in the crosswalk
+- **THEN** its premises return `insufficient_data` with reason `circuit_unmapped`
