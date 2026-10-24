@@ -1,0 +1,160 @@
+name: Transformer_Clip
+kind: shapefile
+path: Data2/Transformer_Clip.shp
+geometry_type: Point Z
+crs: EPSG:4326
+min_records: 26500
+geometry_use: output
+fields:
+  id:
+    type: int64
+    sensitivity: internal
+    description: device object id; matched to topology, then replaced by a keyed token
+  device_typ:
+    type: object
+    sensitivity: public
+    description: device type or subtype
+  source_nom:
+    type: object
+    sensitivity: public
+    description: source (primary) nominal voltage
+  load_nomin:
+    type: object
+    sensitivity: public
+    description: load (secondary) nominal voltage
+  existing_p:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  circuit_id:
+    type: object
+    sensitivity: internal
+    description: numeric circuit id; replaced by a keyed token
+  circuit__1:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_statio:
+    type: object
+    sensitivity: public
+    description: substation alias, organizer anonymized
+  aep_circui:
+    type: object
+    sensitivity: public
+    description: circuit alias, organizer anonymized
+  scada_cont:
+    type: object
+    sensitivity: drop
+    description: control-system identifier
+  owner_name:
+    type: object
+    sensitivity: drop
+    description: owner name
+  aep_custom:
+    type: int64
+    sensitivity: public
+    description: customers downstream of the device as recorded in the GIS
+  structure_:
+    type: object
+    sensitivity: public
+    description: structure the transformer sits on, Pole, Pad and similar
+  aep_west_p:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_west_l:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_distri:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  location_n:
+    type: object
+    sensitivity: internal
+    description: device location key; used only to match topology devices, never written
+  a_phase_sp:
+    type: object
+    sensitivity: drop
+    description: phase detail, not needed
+  b_phase_sp:
+    type: object
+    sensitivity: drop
+    description: phase detail, not needed
+  a_phase_da:
+    type: datetime64[D]
+    sensitivity: drop
+    description: phase date, not needed
+  b_phase_da:
+    type: datetime64[D]
+    sensitivity: drop
+    description: phase date, not needed
+  c_phase_da:
+    type: datetime64[D]
+    sensitivity: drop
+    description: phase date, not needed
+  c_phase_sp:
+    type: object
+    sensitivity: drop
+    description: phase detail, not needed
+  aep_moved_:
+    type: object
+    sensitivity: drop
+    description: meaning not documented
+  upstream_l:
+    type: object
+    sensitivity: drop
+    description: upstream location key, not needed
+  aep_ciac:
+    type: object
+    sensitivity: drop
+    description: all values missing
+  ciac_date:
+    type: datetime64[D]
+    sensitivity: drop
+    description: internal accounting date
+  esri_defau:
+    type: object
+    sensitivity: drop
+    description: map symbol attribute
+  eo_source_:
+    type: object
+    sensitivity: drop
+    description: source system label
+  rotation:
+    type: float64
+    sensitivity: drop
+    description: map symbol rotation
+  global_id:
+    type: object
+    sensitivity: drop
+    description: source-system global identifier
+  owner_type:
+    type: object
+    sensitivity: public
+    description: ownership category
+  bank_confi:
+    type: object
+    sensitivity: public
+    description: bank configuration
+  source_net:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  load_netwo:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_sec_vo:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  mounting:
+    type: object
+    sensitivity: public
+    description: mounting, Overhead or Underground
+  status:
+    type: object
+    sensitivity: public
+    description: asset status

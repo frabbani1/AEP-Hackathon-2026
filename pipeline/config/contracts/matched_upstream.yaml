@@ -1,0 +1,16 @@
+name: matched_upstream
+kind: delimited_text
+path: matched_upstream/matched_upstream.txt
+description: >-
+  One line per premise. The first tab-separated field is the premise number. Each
+  following field is an upstream device written as type*objectid*subtype*devicekey,
+  ordered from the device nearest the premise (a transformer) to the circuit breaker.
+min_records: 117000
+premise_pattern: '^\d{9}$'
+field_delimiter: "\t"
+node_delimiter: "*"
+node_parts:
+  - object_type
+  - object_id
+  - subtype
+  - device_key

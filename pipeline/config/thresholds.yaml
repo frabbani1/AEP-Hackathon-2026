@@ -1,0 +1,39 @@
+# Tunable pipeline parameters.
+
+# Protection zones: a premise is placed in the first upstream device whose downstream
+# premise count reaches this minimum (smaller zones merge upstream).
+zone_minimum_premises: 10
+
+# Damage records are linked to the nearest asset of the matching layer within this distance.
+snap_tolerance_m: 5.0
+metric_crs: EPSG:32617   # UTM zone 17N, used only for distance calculations
+
+# Upper edges (km) of the facility distance bands: <2, 2-5, 5-10, >10.
+distance_bands_km: [2, 5, 10]
+
+# Minimum link coverage (matched / total on the primary side). The run fails below these.
+# null means the link is measured and reported, but not enforced yet.
+# Initial values sit just below the rates found while profiling the real data.
+coverage_minimums:
+  customer_to_topology: 0.995          # observed 99.96%
+  topology_transformer_to_gis: 0.99    # observed 99.6%
+  topology_fuse_to_gis: 0.97           # observed at least 98.5%
+  topology_recloser_to_gis: 0.99       # observed 100% (by location key)
+  damage_snap_transformer: 0.94        # observed 96%
+  damage_snap_fuse: 0.94               # observed 99%
+  damage_snap_recloser: 0.94           # observed 97%
+  damage_snap_switch: 0.80             # set from the first full run: 16 of 19 = 84.2% (small sample)
+  damage_snap_pole: 0.98               # set from the first full run: 99.15%
+  damage_snap_primary: 0.98            # set from the first full run: 99.29%
+  damage_snap_secondary: 0.98          # set from the first full run: 99.36%
+
+# ARCOS asset type -> layer used for snapping. Types not listed (capacitor bank, light,
+# step transformer, unknown) have no matching layer and stay unlinked.
+damage_asset_layers:
+  Pole: Pole_Clip
+  Transformer: Transformer_Clip
+  Fuse Bank: Fuse_Bank_Clip
+  Recloser Bank: Recloser_Bank_Clip
+  Switch: Switch_Clip
+  primary: Primary_ExportFeatures
+  secondary: Secondary_ExportFeatures

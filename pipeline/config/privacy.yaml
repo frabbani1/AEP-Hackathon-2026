@@ -1,0 +1,78 @@
+# Rules used by the leak gate and by tests. Matching is case-insensitive.
+#
+# forbidden_columns: exact column or key names that must never appear in any artifact.
+# forbidden_substrings: fragments that must not appear in any column or key name.
+# raw_identifier_patterns: formats of raw identifiers; no string value in an artifact
+#   may match them (tokens are 32 hex characters and never match).
+# public_forbidden_columns: extra names that must not appear in browser-safe artifacts.
+forbidden_columns:
+  - address
+  - address_nu
+  - addressbui
+  - road_name
+  - road_id
+  - street_cod
+  - zipcode
+  - city
+  - state
+  - macss_mete
+  - anno_strin
+  - service_po
+  - service__1
+  - critical_c
+  - special_op
+  - aep_locati
+  - aep_xfmr_l
+  - premise_nu
+  - circuit_id
+  - scada_cont
+  - global_id
+  - permanent_
+  - owner_name
+  - name
+  - outage_num
+  - incident_w
+  - task_crew
+  - task_job_i
+  - crew_area
+  - reporting_
+  - reporting1
+  - repaired_b
+  - gnis_id
+  - foot_id
+  - complex_id
+  - location_n
+  - location_1
+  - upstream_l
+forbidden_substrings:
+  - address
+  - life_support
+  - lifesupport
+  - life-support
+  - critical
+  - scada
+  - global_id
+  - owner_name
+  - premise_nu
+  - street
+  - zipcode
+  - crew
+  - facility_name
+raw_identifier_patterns:
+  - '^\d{9}$'    # premise number
+  - '^\d{7}$'    # numeric circuit id
+public_forbidden_columns:
+  - geometry
+  - latitude
+  - longitude
+  - lat
+  - lon
+  - lng
+  - x
+  - y
+  - distance
+  - distance_m
+  - distance_km
+  - alias
+  - circuit_alias
+  - substation_alias

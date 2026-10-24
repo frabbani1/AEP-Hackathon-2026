@@ -1,2 +1,11 @@
 # macOS
 .DS_Store
+
+# Curated pipeline outputs (never committed, never part of a hosting build)
+curated/
+
+# Pipeline development environment
+pipeline/.venv/
+pipeline/**/__pycache__/
+pipeline/**/*.egg-info/
+pipeline/.pytest_cache/

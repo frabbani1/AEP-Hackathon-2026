@@ -1,0 +1,104 @@
+name: Customer_Clip
+kind: shapefile
+path: Data1/Customer_Clip.shp
+geometry_type: Point Z
+crs: EPSG:4326
+min_records: 117000
+geometry_use: internal
+fields:
+  id:
+    type: int64
+    sensitivity: drop
+    description: source row identifier, not needed
+  critical_c:
+    type: object
+    sensitivity: drop
+    description: life-support indicator, never carried forward
+  special_op:
+    type: object
+    sensitivity: drop
+    description: special operations indicator
+  aep_locati:
+    type: object
+    sensitivity: drop
+    description: service location key
+  aep_xfmr_l:
+    type: object
+    sensitivity: internal
+    description: transformer location key; used only to cross-check the topology chain
+  road_id:
+    type: int64
+    sensitivity: drop
+    description: road identifier
+  aep_string:
+    type: int64
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  customer_c:
+    type: int64
+    sensitivity: public
+    description: number of customers represented at the service point
+  address:
+    type: object
+    sensitivity: drop
+    description: street address
+  road_name:
+    type: object
+    sensitivity: drop
+    description: road name
+  city:
+    type: object
+    sensitivity: drop
+    description: location detail
+  state:
+    type: object
+    sensitivity: drop
+    description: location detail
+  circuit_id:
+    type: object
+    sensitivity: internal
+    description: numeric circuit id; replaced by a keyed token
+  kind_of_se:
+    type: object
+    sensitivity: public
+    description: service construction, Overhead, Underground or Unknown
+  address_nu:
+    type: object
+    sensitivity: drop
+    description: street address number
+  service_po:
+    type: float64
+    sensitivity: drop
+    description: service-point coordinate
+  service__1:
+    type: float64
+    sensitivity: drop
+    description: service-point coordinate
+  street_cod:
+    type: object
+    sensitivity: drop
+    description: street code
+  macss_mete:
+    type: object
+    sensitivity: drop
+    description: meter identifier
+  anno_strin:
+    type: object
+    sensitivity: drop
+    description: free-text annotation
+  rotation:
+    type: float64
+    sensitivity: drop
+    description: map symbol rotation
+  esri_defau:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  eo_source_:
+    type: object
+    sensitivity: drop
+    description: source system label
+  premise_nu:
+    type: object
+    sensitivity: internal
+    description: premise number; replaced by a keyed token and never written

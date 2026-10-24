@@ -1,0 +1,140 @@
+name: Switch_Clip
+kind: shapefile
+path: Data2/Switch_Clip.shp
+geometry_type: Point Z
+crs: EPSG:4326
+min_records: 890
+geometry_use: output
+fields:
+  id:
+    type: int64
+    sensitivity: internal
+    description: device object id; matched to topology, then replaced by a keyed token
+  device_typ:
+    type: object
+    sensitivity: public
+    description: device type or subtype
+  location_n:
+    type: object
+    sensitivity: internal
+    description: device location key; used only to match topology devices, never written
+  existing_p:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  circuit_id:
+    type: object
+    sensitivity: internal
+    description: numeric circuit id; replaced by a keyed token
+  circuit__1:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_statio:
+    type: object
+    sensitivity: public
+    description: substation alias, organizer anonymized
+  aep_circui:
+    type: object
+    sensitivity: public
+    description: circuit alias, organizer anonymized
+  scada_cont:
+    type: object
+    sensitivity: drop
+    description: control-system identifier
+  normal_sta:
+    type: object
+    sensitivity: public
+    description: normal switching state, Open or Closed
+  owner_name:
+    type: object
+    sensitivity: drop
+    description: owner name
+  mirrored_i:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_out_of:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_distri:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_switch:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_west_l:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  a_phase_sp:
+    type: object
+    sensitivity: drop
+    description: phase detail, not needed
+  b_phase_sp:
+    type: object
+    sensitivity: drop
+    description: phase detail, not needed
+  c_phase_sp:
+    type: object
+    sensitivity: drop
+    description: phase detail, not needed
+  a_phase_da:
+    type: datetime64[D]
+    sensitivity: drop
+    description: phase date, not needed
+  b_phase_da:
+    type: datetime64[D]
+    sensitivity: drop
+    description: phase date, not needed
+  c_phase_da:
+    type: datetime64[D]
+    sensitivity: drop
+    description: phase date, not needed
+  upstream_l:
+    type: object
+    sensitivity: drop
+    description: upstream location key, not needed
+  aep_custom:
+    type: int64
+    sensitivity: public
+    description: customers downstream of the device as recorded in the GIS
+  rotation:
+    type: float64
+    sensitivity: drop
+    description: map symbol rotation
+  esri_defau:
+    type: object
+    sensitivity: drop
+    description: map symbol attribute
+  eo_source_:
+    type: object
+    sensitivity: drop
+    description: source system label
+  status:
+    type: object
+    sensitivity: public
+    description: asset status
+  owner_type:
+    type: object
+    sensitivity: public
+    description: ownership category
+  mounting:
+    type: object
+    sensitivity: public
+    description: mounting, Overhead or Underground
+  network_ty:
+    type: object
+    sensitivity: public
+    description: network type, MV or LV
+  nominal_vo:
+    type: object
+    sensitivity: public
+    description: nominal voltage
+  global_id:
+    type: object
+    sensitivity: drop
+    description: source-system global identifier

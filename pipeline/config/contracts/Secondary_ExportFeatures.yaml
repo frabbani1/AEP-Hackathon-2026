@@ -1,0 +1,161 @@
+name: Secondary_ExportFeatures
+kind: shapefile
+path: Data2/Secondary_ExportFeatures.shp
+geometry_type: LineString
+crs: EPSG:4326
+min_records: 126000
+geometry_use: output
+fields:
+  id:
+    type: int64
+    sensitivity: internal
+    description: segment id; replaced by a keyed token
+  status:
+    type: object
+    sensitivity: public
+    description: asset status
+  network_ty:
+    type: object
+    sensitivity: public
+    description: network type, MV or LV
+  nominal_vo:
+    type: object
+    sensitivity: public
+    description: nominal voltage
+  usage:
+    type: object
+    sensitivity: public
+    description: line usage
+  phase_orde:
+    type: object
+    sensitivity: public
+    description: phase order
+  existing_p:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  circuit_id:
+    type: object
+    sensitivity: internal
+    description: numeric circuit id; replaced by a keyed token
+  aep_statio:
+    type: object
+    sensitivity: public
+    description: substation alias, organizer anonymized
+  aep_circui:
+    type: object
+    sensitivity: public
+    description: circuit alias, organizer anonymized
+  aep_stat_1:
+    type: int64
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_constr:
+    type: object
+    sensitivity: public
+    description: construction type
+  owner_name:
+    type: object
+    sensitivity: drop
+    description: owner name
+  mounting:
+    type: object
+    sensitivity: public
+    description: mounting, Overhead or Underground
+  report_len:
+    type: float64
+    sensitivity: public
+    description: segment length reported by the source
+  a_phase_sp:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  b_phase_sp:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  c_phase_sp:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  u_phase_sp:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  n_phase_sp:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  spec_name:
+    type: object
+    sensitivity: public
+    description: conductor specification name
+  aep_date_i:
+    type: datetime64[D]
+    sensitivity: public
+    description: installation date; placeholder values become missing
+    placeholder_dates: true
+  treatment_:
+    type: datetime64[D]
+    sensitivity: drop
+    description: internal treatment date
+  eo_source_:
+    type: object
+    sensitivity: drop
+    description: source system label
+  esri_defau:
+    type: object
+    sensitivity: drop
+    description: map symbol attribute
+  owner_type:
+    type: object
+    sensitivity: public
+    description: ownership category
+  aep_design:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_poly_p:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_positi:
+    type: int64
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  existing_n:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  location_n:
+    type: object
+    sensitivity: drop
+    description: location name key
+  location_1:
+    type: object
+    sensitivity: drop
+    description: location name key
+  shared_neu:
+    type: int64
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  cable_coun:
+    type: int64
+    sensitivity: public
+    description: number of cables
+  n_cable_co:
+    type: int64
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  global_id:
+    type: object
+    sensitivity: drop
+    description: source-system global identifier
+  estimated_:
+    type: object
+    sensitivity: drop
+    description: all values missing
+  Shape_Leng:
+    type: float64
+    sensitivity: drop
+    description: length in degrees, report_len is used instead

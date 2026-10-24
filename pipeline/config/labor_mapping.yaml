@@ -1,0 +1,204 @@
+# Mapping from damage records to the labor reference.
+#
+# The labor workbook is organized by compatible unit, not by damage type, so the link
+# between a damaged asset and a labor group is engineering judgment. It is written down
+# here so it can be reviewed. Every row that is not "direct" cites an assumption id, and
+# those assumptions are published in the assumptions register.
+#
+# basis: direct | approximate | assumed | none
+#   direct       the workbook has a group that describes this work
+#   approximate  the closest group is used, with a stated difference
+#   assumed      a default is used because the data lacks the needed attribute
+#   none         the workbook has no source hours; hours stay missing (never zero)
+version: 1
+
+review:
+  status: proposed        # proposed | reviewed
+  reviewed_by: null
+  reviewed_on: null
+  note: >-
+    Rows were proposed from the workbook group descriptions. The team must review the
+    approximate rows and the special-equipment-to-adder rows, then change status to reviewed.
+
+asset_mappings:
+  - asset_type: Pole
+    damage_type: Damaged Pole
+    labor_group: POL
+    selector: pole_height
+    basis: direct
+    rationale: Pole work by height range.
+
+  - asset_type: Switch
+    damage_type: Damaged Switch
+    labor_group: SWI
+    selector: single
+    basis: direct
+    rationale: Switching and isolation equipment.
+
+  - asset_type: Recloser Bank
+    damage_type: Damaged Switch
+    labor_group: REC
+    selector: single
+    basis: direct
+    rationale: Recloser and automated control equipment.
+
+  - asset_type: Fuse Bank
+    damage_type: Damaged Switch
+    labor_group: XCO
+    selector: single
+    basis: approximate
+    assumption_id: A-FUSE-01
+    rationale: Fuse cutout average hours.
+
+  - asset_type: Transformer
+    damage_type: Damaged Equipment
+    labor_group: XFM
+    selector: transformer_kva
+    basis: approximate
+    assumption_id: A-XFMR-01
+    rationale: Transformer hours by kVA size; the GIS data has no kVA rating.
+
+  - asset_type: primary
+    damage_type: Damaged Wire
+    labor_group: null
+    selector: none
+    basis: none
+    assumption_id: A-WIRE-01
+    rationale: The workbook has no conductor repair hours.
+
+  - asset_type: secondary
+    damage_type: Damaged Wire
+    labor_group: null
+    selector: none
+    basis: none
+    assumption_id: A-WIRE-01
+    rationale: The workbook has no conductor repair hours.
+
+  - asset_type: (unknown)
+    damage_type: Damaged Wire
+    labor_group: null
+    selector: none
+    basis: none
+    assumption_id: A-WIRE-01
+    rationale: Wire damage with no asset type recorded; the workbook has no conductor repair hours.
+
+  - asset_type: Capacitor Bank
+    damage_type: Damaged Equipment
+    labor_group: null
+    selector: none
+    basis: none
+    assumption_id: A-UNMAPPED-01
+    rationale: The workbook has no group for capacitor banks.
+
+  - asset_type: Step Transformer
+    damage_type: Damaged Equipment
+    labor_group: null
+    selector: none
+    basis: none
+    assumption_id: A-UNMAPPED-01
+    rationale: The workbook has no group for step transformers.
+
+  - asset_type: Light
+    damage_type: Damaged Light
+    labor_group: null
+    selector: none
+    basis: none
+    assumption_id: A-UNMAPPED-01
+    rationale: The workbook has no group for lights.
+
+adder_mappings:
+  access_issue:
+    "Yes":
+      adder: Access Constraint Adder
+      basis: approximate
+      assumption_id: A-ADDER-01
+      rationale: Apply when normal equipment access is obstructed or limited.
+  special_equipment:
+    Backyard Bucket:
+      adder: Backyard Adder
+      basis: approximate
+      assumption_id: A-ADDER-02
+      rationale: A backyard bucket truck implies confined property access.
+    Track Hoe:
+      adder: Off-Road / Track Access
+      basis: approximate
+      assumption_id: A-ADDER-03
+      rationale: Tracked equipment implies a non-standard access route.
+    Yard Dog:
+      adder: Off-Road / Track Access
+      basis: approximate
+      assumption_id: A-ADDER-03
+      rationale: Tracked equipment implies a non-standard access route.
+    Material Handler:
+      adder: Specialized Handling Adder
+      basis: approximate
+      assumption_id: A-ADDER-04
+      rationale: Extra lifting or positioning resources.
+    Big Bucket:
+      adder: null
+      basis: none
+      assumption_id: A-ADDER-05
+      rationale: No matching adder in the workbook.
+    Tandem Bucket:
+      adder: null
+      basis: none
+      assumption_id: A-ADDER-05
+      rationale: No matching adder in the workbook.
+    Tandem Line:
+      adder: null
+      basis: none
+      assumption_id: A-ADDER-05
+      rationale: No matching adder in the workbook.
+    Backhoe:
+      adder: null
+      basis: none
+      assumption_id: A-ADDER-05
+      rationale: No matching adder in the workbook.
+    Other:
+      adder: null
+      basis: none
+      assumption_id: A-ADDER-05
+      rationale: Unspecified equipment has no matching adder.
+
+assumptions:
+  A-WIRE-01:
+    description: >-
+      The workbook has no conductor repair hours. Damaged wire (primary, secondary and
+      records with no asset type) therefore has no labor hours here. The restoration step
+      must apply a clearly labeled planning assumption of its own.
+  A-FUSE-01:
+    description: >-
+      Fuse bank damage uses the fuse cutout average hours. The workbook describes that
+      group as protection for transformers, while fuse banks sit on the primary network,
+      so the hours are an approximation.
+  A-XFMR-01:
+    description: >-
+      The GIS data has no transformer kVA rating. Unless a rating is supplied, the
+      unweighted average of the documented kVA sizes is used.
+  A-POLE-01:
+    description: >-
+      When a pole's height is unknown, the medium size group (40 to 55 ft) is assumed.
+  A-POLE-02:
+    description: >-
+      When a pole's height falls outside the documented ranges, the nearest size group is used.
+  A-UNMAPPED-01:
+    description: >-
+      Capacitor banks, step transformers and lights have no labor group in the workbook.
+      Their hours are missing, not zero.
+  A-ADDER-01:
+    description: >-
+      A recorded access issue is matched to the access constraint adder. The record does not
+      say how severe the constraint is.
+  A-ADDER-02:
+    description: >-
+      A backyard bucket truck is taken to mean confined property access and is matched to the backyard adder.
+  A-ADDER-03:
+    description: >-
+      Tracked equipment (track hoe, yard dog) is taken to mean a non-standard access route and
+      is matched to the off-road adder.
+  A-ADDER-04:
+    description: >-
+      A material handler is matched to the specialized handling adder.
+  A-ADDER-05:
+    description: >-
+      These equipment values have no matching adder in the workbook, so no adder hours are added.

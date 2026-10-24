@@ -1,0 +1,112 @@
+name: arcos_prod_damage_09_28_Clip
+kind: shapefile
+path: Data1/arcos_prod_damage_09_28_Clip.shp
+geometry_type: Point Z
+crs: EPSG:4326
+min_records: 1600
+geometry_use: output
+fields:
+  Outage_Num:
+    type: float64
+    sensitivity: drop
+    description: constant zero, no outage identifier provided
+  Incident_W:
+    type: float64
+    sensitivity: drop
+    description: constant zero
+  Event:
+    type: object
+    sensitivity: drop
+    description: constant value, no event identifier provided
+  Region:
+    type: object
+    sensitivity: drop
+    description: operating-company region name
+  District:
+    type: object
+    sensitivity: drop
+    description: all values missing
+  Crew_Area:
+    type: object
+    sensitivity: drop
+    description: crew area, internal
+  Substation:
+    type: object
+    sensitivity: public
+    description: substation alias, organizer anonymized
+  Circuit:
+    type: object
+    sensitivity: public
+    description: circuit alias, organizer anonymized
+  Report_Tim:
+    type: datetime64[D]
+    sensitivity: public
+    description: report date; the source stores no time of day
+  Reporting_:
+    type: object
+    sensitivity: drop
+    description: reporting source, internal and all missing
+  Reporting1:
+    type: object
+    sensitivity: drop
+    description: reporting source, internal and all missing
+  TASK_Crew:
+    type: object
+    sensitivity: drop
+    description: crew field, internal
+  TASK_Job_I:
+    type: object
+    sensitivity: drop
+    description: task field, internal
+  Status:
+    type: object
+    sensitivity: drop
+    description: all values missing
+  Repaired:
+    type: object
+    sensitivity: public
+    description: Yes or No repaired flag
+  Repaired_D:
+    type: datetime64[D]
+    sensitivity: public
+    description: repaired date; for unrepaired records this looks like a snapshot date
+  Repaired_B:
+    type: object
+    sensitivity: drop
+    description: repaired-by field, internal
+  Asset_Type:
+    type: object
+    sensitivity: public
+    description: type of damaged asset
+  Inform_Wor:
+    type: object
+    sensitivity: public
+    description: damage type text from the damage report
+  Media:
+    type: float64
+    sensitivity: public
+    description: count of attached media items (assumed from the field name)
+  Access_Iss:
+    type: object
+    sensitivity: public
+    description: Yes or No access issue indicator
+  Special_Eq:
+    type: object
+    sensitivity: public
+    description: special equipment needed, None when not needed
+  Longitude:
+    type: float64
+    sensitivity: drop
+    description: duplicate of geometry
+  Latitude:
+    type: float64
+    sensitivity: drop
+    description: duplicate of geometry
+  NEAR_FID:
+    type: int64
+    sensitivity: drop
+    description: identifier from a snapping step, matches no layer
+  NEAR_DIST:
+    type: float64
+    sensitivity: drop
+    description: constant zero

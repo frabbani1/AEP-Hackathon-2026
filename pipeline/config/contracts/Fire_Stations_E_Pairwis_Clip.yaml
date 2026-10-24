@@ -1,0 +1,116 @@
+name: Fire_Stations_E_Pairwis_Clip
+kind: shapefile
+path: Data1/Fire_Stations_E_Pairwis_Clip.shp
+geometry_type: Point Z
+crs_contains: Pseudo-Mercator
+min_records: 37
+geometry_use: internal
+fields:
+  PERMANENT_:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  SOURCE_FEA:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  SOURCE_DAT:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  SOURCE_D_1:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  SOURCE_ORI:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  DATA_SECUR:
+    type: int32
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  DISTRIBUTI:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  LOADDATE:
+    type: datetime64[D]
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  FTYPE:
+    type: int64
+    sensitivity: public
+    description: facility feature type code
+  FCODE:
+    type: int64
+    sensitivity: public
+    description: facility feature code
+  NAME:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  ISLANDMARK:
+    type: int64
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  POINTLOCAT:
+    type: int64
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  ADMINTYPE:
+    type: int64
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  ADDRESSBUI:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  ADDRESS:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  CITY:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  STATE:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  ZIPCODE:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  GNIS_ID:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  FOOT_ID:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
+  COMPLEX_ID:
+    type: object
+    sensitivity: drop
+    description: source or identifier metadata, facility name, address or location detail; priority facilities
+      are published only by category and distance band
