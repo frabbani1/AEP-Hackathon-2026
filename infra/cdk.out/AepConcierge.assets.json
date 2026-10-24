@@ -1,0 +1,36 @@
+{
+  "version": "55.0.0",
+  "files": {
+    "1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51": {
+      "displayName": "Api/RiskFn/Code",
+      "source": {
+        "path": "asset.1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-us-east-2-0a401237": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-2",
+          "objectKey": "1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51.zip",
+          "region": "us-east-2",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-us-east-2"
+        }
+      }
+    },
+    "4cdf5217e7aab2f9f0d5336e8780593abf17cc3ed4d5068493c9fc460b84bacb": {
+      "displayName": "AepConcierge Template",
+      "source": {
+        "path": "AepConcierge.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-us-east-2-63daa023": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-2",
+          "objectKey": "4cdf5217e7aab2f9f0d5336e8780593abf17cc3ed4d5068493c9fc460b84bacb.json",
+          "region": "us-east-2",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-us-east-2"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

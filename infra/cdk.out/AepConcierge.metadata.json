@@ -1,0 +1,602 @@
+{
+  "/AepConcierge": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    },
+    {
+      "type": "aws:cdk:templateFile",
+      "data": "AepConcierge.template.json"
+    },
+    {
+      "type": "aws:cdk:stack-tags",
+      "data": [
+        {
+          "key": "project",
+          "value": "aep-hack"
+        }
+      ]
+    }
+  ],
+  "/AepConcierge/ApiUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "out (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:30:7)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:31:5)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/AssetsUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AssetsUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "out (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:30:7)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:32:5)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/AssetsBucket": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AssetsBucket"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "out (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:30:7)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:33:5)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/DistributionId": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DistributionId"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "out (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:30:7)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:34:5)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/AmplifyAppId": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AmplifyAppId"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "out (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:30:7)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:35:5)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/AmplifyBranch": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AmplifyBranch"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "out (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:30:7)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:36:5)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/AmplifyUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AmplifyUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "out (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:30:7)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:37:5)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/AepConcierge/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/AepConcierge/Frontend/App": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FrontendAppCED3FBC2"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new Frontend (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/frontend.ts:53:16)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:22:22)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Frontend/Branch": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FrontendBranchA9C47CE8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new Frontend (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/frontend.ts:60:19)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:22:22)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/AepConcierge/Assets/Bucket/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AssetsBucket252B3DF7"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new PublicAssets (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/assets.ts:26:19)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:25:20)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Assets/Headers/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AssetsHeaders893F270D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new ResponseHeadersPolicy2 in aws-cdk-lib...",
+        "new PublicAssets (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/assets.ts:33:21)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:25:20)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Assets/Cdn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AssetsCdn0C82C7C5"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Distribution2 in aws-cdk-lib...",
+        "new PublicAssets (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/assets.ts:51:25)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:25:20)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/RiskLogs/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiRiskLogs533FBC0C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new LogGroup2 in aws-cdk-lib...",
+        "make (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:66:19)",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:75:13)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/RiskFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiRiskFn85FF81D6"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "make (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:55:14)",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:75:13)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/RestorationLogs/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiRestorationLogs3AB93FD9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new LogGroup2 in aws-cdk-lib...",
+        "make (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:66:19)",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:79:20)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/RestorationFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiRestorationFn5BDA8072"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "make (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:55:14)",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:79:20)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/MessagesLogs/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiMessagesLogsDACFE568"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new LogGroup2 in aws-cdk-lib...",
+        "make (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:66:19)",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:80:17)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/MessagesFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiMessagesFn2B701406"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "make (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:55:14)",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:80:17)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApi4C294DC0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new HttpApi2 in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:83:20)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/AccessLogs/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiAccessLogs50B185DB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new LogGroup2 in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:96:24)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/Stage/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiStage4697DF29"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new HttpStage2 in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:101:18)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/AepConcierge/Assets/Bucket/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AssetsBucketPolicy75E1DDEC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new PublicAssets (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/assets.ts:26:19)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:25:20)"
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/GET--risk/RiskIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiGETriskRiskIntegrationPermission87832E83"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:118:18)"
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/GET--risk/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiGETrisk92EA68D0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:118:18)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/GET--health/RiskIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiGEThealthRiskIntegrationPermission19B20015"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:119:18)"
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/GET--health/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiGEThealth60A18DF0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:119:18)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/POST--restoration/RestorationIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiPOSTrestorationRestorationIntegrationPermission542BA9C9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:120:18)"
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/POST--restoration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiPOSTrestorationFC06E882"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:120:18)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/POST--messages/MessagesIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiPOSTmessagesMessagesIntegrationPermissionEA7F2269"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:124:18)"
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/POST--messages/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiPOSTmessagesE76FBEAF"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:124:18)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:26:17)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/AepConcierge/Assets/Cdn/Origin1/S3OriginAccessControl/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AssetsCdnOrigin1S3OriginAccessControlA511DE13"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Distribution2 in aws-cdk-lib...",
+        "new PublicAssets (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/assets.ts:51:25)",
+        "new ConciergeStack (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/concierge-stack.ts:25:20)",
+        "<anonymous> (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/bin/aep-hack.ts:7:1)"
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/GET--risk/RiskIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiGETriskRiskIntegrationD7B9F3C3"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:118:18)"
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/POST--restoration/RestorationIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiPOSTrestorationRestorationIntegration2A88F56C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:120:18)"
+      ]
+    }
+  ],
+  "/AepConcierge/Api/HttpApi/POST--messages/MessagesIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHttpApiPOSTmessagesMessagesIntegration6204B3EE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        ".../Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/node_modules/aws-cdk-lib/aws-apigatewayv2/lib/http/api.js:1:96 in aws-cdk-lib...",
+        "Array.map (:)",
+        "...PropertyInjectable.<anonymous> in aws-cdk-lib...",
+        "new Api (/Users/parkermiconi/Downloads/AEP-Hackathon-2026/infra/lib/api.ts:124:18)"
+      ]
+    }
+  ]
+}

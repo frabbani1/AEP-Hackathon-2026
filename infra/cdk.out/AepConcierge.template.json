@@ -1,0 +1,972 @@
+{
+ "Description": "AI Outage Concierge: Lambda, API Gateway HTTP API, CloudFront, Amplify (HackOHI/O 2026)",
+ "Resources": {
+  "FrontendAppCED3FBC2": {
+   "Type": "AWS::Amplify::App",
+   "Properties": {
+    "CustomHeaders": "customHeaders:\n  - pattern: '**'\n    headers:\n      - key: Strict-Transport-Security\n        value: 'max-age=31536000; includeSubDomains'\n      - key: X-Content-Type-Options\n        value: nosniff\n      - key: X-Frame-Options\n        value: DENY\n      - key: Referrer-Policy\n        value: no-referrer\n      - key: Content-Security-Policy\n        value: \"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://*.cloudfront.net; connect-src 'self' https://*.execute-api.us-east-2.amazonaws.com https://*.cloudfront.net; base-uri 'self'; form-action 'self'; frame-ancestors 'none'\"",
+    "Description": "AI Outage Concierge web app (HackOHI/O 2026, AEP challenge)",
+    "Name": "aep-outage-concierge",
+    "Platform": "WEB"
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Frontend/App"
+   }
+  },
+  "FrontendBranchA9C47CE8": {
+   "Type": "AWS::Amplify::Branch",
+   "Properties": {
+    "AppId": {
+     "Fn::GetAtt": [
+      "FrontendAppCED3FBC2",
+      "AppId"
+     ]
+    },
+    "BranchName": "main",
+    "Description": "Manual deployments from scripts/amplify_deploy.sh",
+    "EnableAutoBuild": false,
+    "Stage": "PRODUCTION"
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Frontend/Branch"
+   }
+  },
+  "AssetsBucket252B3DF7": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Assets/Bucket/Resource"
+   }
+  },
+  "AssetsBucketPolicy75E1DDEC": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "AssetsBucket252B3DF7"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "AssetsBucket252B3DF7",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "AssetsBucket252B3DF7",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:GetObject",
+       "Condition": {
+        "StringEquals": {
+         "AWS:SourceArn": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:",
+            {
+             "Ref": "AWS::Partition"
+            },
+            ":cloudfront::",
+            {
+             "Ref": "AWS::AccountId"
+            },
+            ":distribution/",
+            {
+             "Ref": "AssetsCdn0C82C7C5"
+            }
+           ]
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "AssetsBucket252B3DF7",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Assets/Bucket/Policy/Resource"
+   }
+  },
+  "AssetsHeaders893F270D": {
+   "Type": "AWS::CloudFront::ResponseHeadersPolicy",
+   "Properties": {
+    "ResponseHeadersPolicyConfig": {
+     "Comment": "CORS for the Amplify site plus standard security headers",
+     "CorsConfig": {
+      "AccessControlAllowCredentials": false,
+      "AccessControlAllowHeaders": {
+       "Items": [
+        "*"
+       ]
+      },
+      "AccessControlAllowMethods": {
+       "Items": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+       ]
+      },
+      "AccessControlAllowOrigins": {
+       "Items": [
+        {
+         "Fn::Join": [
+          "",
+          [
+           "https://main.",
+           {
+            "Fn::GetAtt": [
+             "FrontendAppCED3FBC2",
+             "DefaultDomain"
+            ]
+           }
+          ]
+         ]
+        },
+        "http://localhost:5173"
+       ]
+      },
+      "AccessControlMaxAgeSec": 86400,
+      "OriginOverride": true
+     },
+     "Name": "AepConciergeAssetsHeadersE6435574",
+     "SecurityHeadersConfig": {
+      "ContentTypeOptions": {
+       "Override": true
+      },
+      "FrameOptions": {
+       "FrameOption": "DENY",
+       "Override": true
+      },
+      "ReferrerPolicy": {
+       "Override": true,
+       "ReferrerPolicy": "no-referrer"
+      },
+      "StrictTransportSecurity": {
+       "AccessControlMaxAgeSec": 31536000,
+       "IncludeSubdomains": true,
+       "Override": true
+      }
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Assets/Headers/Resource"
+   }
+  },
+  "AssetsCdnOrigin1S3OriginAccessControlA511DE13": {
+   "Type": "AWS::CloudFront::OriginAccessControl",
+   "Properties": {
+    "OriginAccessControlConfig": {
+     "Name": "AepConciergeAssetsCdnOrigin1S3OriginAccessControlA76AEF02",
+     "OriginAccessControlOriginType": "s3",
+     "SigningBehavior": "always",
+     "SigningProtocol": "sigv4"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Assets/Cdn/Origin1/S3OriginAccessControl/Resource"
+   }
+  },
+  "AssetsCdn0C82C7C5": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "Comment": "AI Outage Concierge public assets",
+     "DefaultCacheBehavior": {
+      "AllowedMethods": [
+       "GET",
+       "HEAD",
+       "OPTIONS"
+      ],
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true,
+      "ResponseHeadersPolicyId": {
+       "Ref": "AssetsHeaders893F270D"
+      },
+      "TargetOriginId": "AepConciergeAssetsCdnOrigin1907F6F7A",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "Enabled": true,
+     "HttpVersion": "http2and3",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "AssetsBucket252B3DF7",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "AepConciergeAssetsCdnOrigin1907F6F7A",
+       "OriginAccessControlId": {
+        "Fn::GetAtt": [
+         "AssetsCdnOrigin1S3OriginAccessControlA511DE13",
+         "Id"
+        ]
+       },
+       "S3OriginConfig": {
+        "OriginAccessIdentity": ""
+       }
+      }
+     ],
+     "PriceClass": "PriceClass_100"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Assets/Cdn/Resource"
+   }
+  },
+  "ApiRiskLogs533FBC0C": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/aep-hack-risk",
+    "RetentionInDays": 7
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/RiskLogs/Resource"
+   }
+  },
+  "ApiRiskFn85FF81D6": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-2"
+     },
+     "S3Key": "1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51.zip"
+    },
+    "Description": "Outage risk band, confidence and factors",
+    "Environment": {
+     "Variables": {
+      "TABLE_NAME": "aep-premise-risk",
+      "DATA_BUCKET": {
+       "Fn::Join": [
+        "",
+        [
+         "aep-hack-data-",
+         {
+          "Ref": "AWS::AccountId"
+         }
+        ]
+       ]
+      }
+     }
+    },
+    "FunctionName": "aep-hack-risk",
+    "Handler": "concierge.api.risk_handler.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "ApiRiskLogs533FBC0C"
+     }
+    },
+    "MemorySize": 512,
+    "Role": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":iam::",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":role/aep-hack-api-role"
+      ]
+     ]
+    },
+    "Runtime": "python3.12",
+    "Timeout": 10
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/RiskFn/Resource",
+    "aws:asset:path": "asset.1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "ApiRestorationLogs3AB93FD9": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/aep-hack-restoration",
+    "RetentionInDays": 7
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/RestorationLogs/Resource"
+   }
+  },
+  "ApiRestorationFn5BDA8072": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-2"
+     },
+     "S3Key": "1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51.zip"
+    },
+    "Description": "Restoration range (placeholder)",
+    "FunctionName": "aep-hack-restoration",
+    "Handler": "concierge.api.restoration_handler.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "ApiRestorationLogs3AB93FD9"
+     }
+    },
+    "MemorySize": 128,
+    "Role": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":iam::",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":role/aep-hack-api-role"
+      ]
+     ]
+    },
+    "Runtime": "python3.12",
+    "Timeout": 10
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/RestorationFn/Resource",
+    "aws:asset:path": "asset.1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "ApiMessagesLogsDACFE568": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/aep-hack-messages",
+    "RetentionInDays": 7
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/MessagesLogs/Resource"
+   }
+  },
+  "ApiMessagesFn2B701406": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-2"
+     },
+     "S3Key": "1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51.zip"
+    },
+    "Description": "Customer messages (placeholder)",
+    "FunctionName": "aep-hack-messages",
+    "Handler": "concierge.api.messages_handler.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "ApiMessagesLogsDACFE568"
+     }
+    },
+    "MemorySize": 128,
+    "Role": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":iam::",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":role/aep-hack-api-role"
+      ]
+     ]
+    },
+    "Runtime": "python3.12",
+    "Timeout": 10
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/MessagesFn/Resource",
+    "aws:asset:path": "asset.1cde559f46fbf4411b505dca14d1c3fa14da80765ae8e57adf86e237e5762d51",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "ApiHttpApi4C294DC0": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "CorsConfiguration": {
+     "AllowHeaders": [
+      "content-type"
+     ],
+     "AllowMethods": [
+      "GET",
+      "POST",
+      "OPTIONS"
+     ],
+     "AllowOrigins": [
+      {
+       "Fn::Join": [
+        "",
+        [
+         "https://main.",
+         {
+          "Fn::GetAtt": [
+           "FrontendAppCED3FBC2",
+           "DefaultDomain"
+          ]
+         }
+        ]
+       ]
+      },
+      "http://localhost:5173"
+     ],
+     "MaxAge": 86400
+    },
+    "Description": "AI Outage Concierge API",
+    "Name": "aep-hack-api",
+    "ProtocolType": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/Resource"
+   }
+  },
+  "ApiHttpApiGETriskRiskIntegrationD7B9F3C3": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "ApiHttpApi4C294DC0"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::GetAtt": [
+      "ApiRiskFn85FF81D6",
+      "Arn"
+     ]
+    },
+    "PayloadFormatVersion": "2.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/GET--risk/RiskIntegration/Resource"
+   }
+  },
+  "ApiHttpApiGETriskRiskIntegrationPermission87832E83": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiRiskFn85FF81D6",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-2:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "ApiHttpApi4C294DC0"
+       },
+       "/*/*/risk"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/GET--risk/RiskIntegration-Permission"
+   }
+  },
+  "ApiHttpApiGETrisk92EA68D0": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "ApiHttpApi4C294DC0"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "GET /risk",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "ApiHttpApiGETriskRiskIntegrationD7B9F3C3"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/GET--risk/Resource"
+   }
+  },
+  "ApiHttpApiGEThealthRiskIntegrationPermission19B20015": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiRiskFn85FF81D6",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-2:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "ApiHttpApi4C294DC0"
+       },
+       "/*/*/health"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/GET--health/RiskIntegration-Permission"
+   }
+  },
+  "ApiHttpApiGEThealth60A18DF0": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "ApiHttpApi4C294DC0"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "GET /health",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "ApiHttpApiGETriskRiskIntegrationD7B9F3C3"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/GET--health/Resource"
+   }
+  },
+  "ApiHttpApiPOSTrestorationRestorationIntegration2A88F56C": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "ApiHttpApi4C294DC0"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::GetAtt": [
+      "ApiRestorationFn5BDA8072",
+      "Arn"
+     ]
+    },
+    "PayloadFormatVersion": "2.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/POST--restoration/RestorationIntegration/Resource"
+   }
+  },
+  "ApiHttpApiPOSTrestorationRestorationIntegrationPermission542BA9C9": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiRestorationFn5BDA8072",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-2:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "ApiHttpApi4C294DC0"
+       },
+       "/*/*/restoration"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/POST--restoration/RestorationIntegration-Permission"
+   }
+  },
+  "ApiHttpApiPOSTrestorationFC06E882": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "ApiHttpApi4C294DC0"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "POST /restoration",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "ApiHttpApiPOSTrestorationRestorationIntegration2A88F56C"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/POST--restoration/Resource"
+   }
+  },
+  "ApiHttpApiPOSTmessagesMessagesIntegration6204B3EE": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "ApiHttpApi4C294DC0"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::GetAtt": [
+      "ApiMessagesFn2B701406",
+      "Arn"
+     ]
+    },
+    "PayloadFormatVersion": "2.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/POST--messages/MessagesIntegration/Resource"
+   }
+  },
+  "ApiHttpApiPOSTmessagesMessagesIntegrationPermissionEA7F2269": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiMessagesFn2B701406",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-2:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "ApiHttpApi4C294DC0"
+       },
+       "/*/*/messages"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/POST--messages/MessagesIntegration-Permission"
+   }
+  },
+  "ApiHttpApiPOSTmessagesE76FBEAF": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "ApiHttpApi4C294DC0"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "POST /messages",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "ApiHttpApiPOSTmessagesMessagesIntegration6204B3EE"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/HttpApi/POST--messages/Resource"
+   }
+  },
+  "ApiAccessLogs50B185DB": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/apigateway/aep-hack-api",
+    "RetentionInDays": 7
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/AccessLogs/Resource"
+   }
+  },
+  "ApiStage4697DF29": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "AccessLogSettings": {
+     "DestinationArn": {
+      "Fn::GetAtt": [
+       "ApiAccessLogs50B185DB",
+       "Arn"
+      ]
+     },
+     "Format": "{\"requestId\":\"$context.requestId\",\"route\":\"$context.routeKey\",\"status\":\"$context.status\",\"latencyMs\":\"$context.responseLatency\",\"integrationStatus\":\"$context.integrationStatus\"}"
+    },
+    "ApiId": {
+     "Ref": "ApiHttpApi4C294DC0"
+    },
+    "AutoDeploy": true,
+    "DefaultRouteSettings": {
+     "ThrottlingBurstLimit": 50,
+     "ThrottlingRateLimit": 25
+    },
+    "StageName": "$default"
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/Api/Stage/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/3VR227CMAz9lr2HbLST9lyYNiZNGoIPQCE1xdAmUeyAUNR/X5oOgabt6Vx8k+1CFi/P8ulBnWmi6+Okxa2Ma1b6KJK1iapzLe4uMs53pnJOJJh5ZfS+F1TKOAv6CJzdkY2wtC3qy83+0aOYKYJe6NaGeuetYRlXQM4aggWoGjzdqv8OvCKxx21gtEasyy+PDZpKayCap37etkPtP/Z9cS9a25CMn7Z59zbk7a48xVS3rZWMb8HoPCpF7/kSfIdEuQ+VG0UETLIaQCiHjWI4q8upkHHB7CqHIt8QxSBXNjBk9mEYGq+uXX/JW156SgODlUnfi3QcG7wGkUcOLpombx7YBe6FsTXIAz2eilJOp+nJB0Kc+GAYO5CrEb8BlFLUrgECAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "AepConcierge/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ApiUrl": {
+   "Description": "API Gateway base URL (VITE_API_URL)",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "ApiHttpApi4C294DC0"
+      },
+      ".execute-api.us-east-2.",
+      {
+       "Ref": "AWS::URLSuffix"
+      }
+     ]
+    ]
+   }
+  },
+  "AssetsUrl": {
+   "Description": "CloudFront base URL for public assets (VITE_ASSETS_URL)",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "AssetsCdn0C82C7C5",
+        "DomainName"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "AssetsBucket": {
+   "Description": "Public assets bucket, written only by scripts/aws_publish_public.sh",
+   "Value": {
+    "Ref": "AssetsBucket252B3DF7"
+   }
+  },
+  "DistributionId": {
+   "Description": "CloudFront distribution id, for cache invalidation",
+   "Value": {
+    "Ref": "AssetsCdn0C82C7C5"
+   }
+  },
+  "AmplifyAppId": {
+   "Description": "Amplify app id",
+   "Value": {
+    "Fn::GetAtt": [
+     "FrontendAppCED3FBC2",
+     "AppId"
+    ]
+   }
+  },
+  "AmplifyBranch": {
+   "Description": "Amplify branch that receives manual deployments",
+   "Value": "main"
+  },
+  "AmplifyUrl": {
+   "Description": "Public URL of the web app",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://main.",
+      {
+       "Fn::GetAtt": [
+        "FrontendAppCED3FBC2",
+        "DefaultDomain"
+       ]
+      }
+     ]
+    ]
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
