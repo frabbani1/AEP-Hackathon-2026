@@ -1,0 +1,15 @@
+name: Install_Labor_HackOHIO
+kind: workbook
+path: Install_Labor_HackOHIO.xlsx
+description: Labor hours by compatible unit, labor-only adders and the indirect labor multiplier.
+sheets:
+  - CNC
+  - Labor time material related
+  - Labor only work
+  - Indirect Labor Multiplier
+  - CU Group descriptions
+min_rows:
+  CNC: 90
+  Labor time material related: 55
+  Labor only work: 11
+  CU Group descriptions: 17

@@ -1,0 +1,102 @@
+name: Pole_Clip
+kind: shapefile
+path: Data1/Pole_Clip.shp
+geometry_type: Point Z
+crs: EPSG:4326
+min_records: 106000
+geometry_use: output
+fields:
+  id:
+    type: int64
+    sensitivity: internal
+    description: pole id; replaced by a keyed token
+  status:
+    type: object
+    sensitivity: public
+    description: asset status
+  location_n:
+    type: object
+    sensitivity: drop
+    description: location name key
+  usage:
+    type: object
+    sensitivity: public
+    description: pole usage
+  number:
+    type: object
+    sensitivity: drop
+    description: internal asset number
+  owner_name:
+    type: object
+    sensitivity: drop
+    description: owner name
+  date_insta:
+    type: datetime64[D]
+    sensitivity: public
+    description: installation date; placeholder values become missing
+    placeholder_dates: true
+  date_ins_1:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  aep_moved_:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  material:
+    type: object
+    sensitivity: public
+    description: pole material
+  aep_plant_:
+    type: object
+    sensitivity: undocumented
+    description: meaning not documented, never read
+  height:
+    type: object
+    sensitivity: public
+    description: pole height as text, may be Unknown
+  class:
+    type: object
+    sensitivity: public
+    description: pole class as text, may be Unknown
+  treatment:
+    type: object
+    sensitivity: drop
+    description: all values missing
+  aep_ciac:
+    type: object
+    sensitivity: drop
+    description: all values missing
+  ciac_date:
+    type: datetime64[D]
+    sensitivity: drop
+    description: internal accounting date
+  date_manuf:
+    type: datetime64[D]
+    sensitivity: public
+    description: manufacture date; placeholder values become missing
+    placeholder_dates: true
+  reinforcem:
+    type: object
+    sensitivity: drop
+    description: almost entirely missing
+  esri_defau:
+    type: object
+    sensitivity: drop
+    description: map symbol attribute
+  eo_source_:
+    type: object
+    sensitivity: drop
+    description: source system label
+  rotation:
+    type: float64
+    sensitivity: drop
+    description: map symbol rotation
+  owner_type:
+    type: object
+    sensitivity: public
+    description: ownership category
+  global_id:
+    type: object
+    sensitivity: drop
+    description: source-system global identifier
