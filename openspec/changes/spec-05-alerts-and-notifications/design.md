@@ -128,8 +128,10 @@ If `h` is omitted, the full lead list is returned with no status. Moving `h` cha
 }
 ```
 
-`qualifies` is true if any message type beyond restoration-complete is eligible. `rules_fired` is the list used by the
-audit log.
+`qualifies` is true when pre-storm alerts are eligible (tier `standard` or above, or the customer opted in). Outage-confirmed and
+restoration-complete are available to every enrolled customer, so counting them would make `qualifies` always true; the response
+carries a `qualifies_note` that says this. `rules_fired` is the list used by the audit log. The response also carries
+`enrolled` and `decision_id`.
 
 ### D5. Templates
 Four message types x four channels. Canonical text is in `messages/templates.py`, built from placeholders
@@ -159,7 +161,10 @@ Validation (a rejection returns 400 with "Demo only: use a fictional number like
 - At most 4 channels, one per type. Values at most 64 characters. No name, address, or free text is accepted.
 - `needs` uses the same booleans as the other routes. They are optional and only stored if the customer supplies them.
 
-Storage (`EnrollmentStore`): key `token`, with channel type, validated value, `needs` flags, message types opted in,
+`message_types` is the customer's choice of which of the four messages they want (default all four). For the `info` tier, keeping
+`pre_storm` in that list is the opt-in for storm alerts. A customer who enrolls with the default list is therefore opted in.
+
+Storage (`AlertStore`): key `token`, with channel type, validated value, `needs` flags, message types opted in,
 `created_at`, and `expires_at` (24 hours; DynamoDB TTL). One enrollment per token (upsert). Responses show contact values
 masked (`***-0123`, `e***@example.com`). Contact values are never logged and never returned in full.
 Implementations: `MemoryStore` (local and tests), `DynamoStore` (cloud, single table, TTL). The cloud table is created
@@ -170,7 +175,9 @@ by CDK after review.
 ### D7. Mock delivery
 `Delivery` is an interface with one implementation, `MockDelivery`. `POST /alerts/simulate {token, event, ...scenario}`
 evaluates eligibility for the event, builds the message from the template (or from spec-06 when `use_llm` is true),
-writes an outbox item `{channel, text, status: "not_sent_demo"}`, and returns it. No network call is made. The code
+writes an outbox item `{channel, text, status: "not_sent_demo"}`, and returns it. It requires an enrollment, a chosen message
+type, and an eligible event; otherwise it records nothing and returns a reason code (`not_enrolled`, `message_type_not_chosen`,
+`not_eligible`), with an audit entry either way. `use_llm` defaults to false here. No network call is made. The code
 imports no SMS or email client. The Lambda role has no `sns:Publish`, `ses:Send*`, `sms-voice:*`, or `mobiletargeting:*`;
 a test scans the IAM script and CDK stack for those actions.
 
@@ -205,7 +212,8 @@ backend/concierge/alerts/
   rules_table.json   tables from D2 with version and plain-language reasons
   table.py           loader, validation, table_hash
   evaluate.py        buckets -> tier -> timing -> channels -> escalation -> rules_fired
-  enroll.py          validation (D6), EnrollmentStore, MemoryStore, DynamoStore
+  enroll.py          validation (D6), masking, enroll and unenroll
+  stores.py          AlertStore interface, MemoryStore, DynamoStore (single table, TTL)
   delivery.py        Delivery interface, MockDelivery, outbox
   audit.py           entry builder, store write, log line
 backend/concierge/messages/templates.py   four types x four channels
@@ -232,4 +240,5 @@ backend/concierge/messages/templates.py   four types x four channels
 
 - Should `info` tier customers get pre-storm messages if they ticked "opt in"? The design says yes; confirm.
 - Is a 24-hour enrollment expiry long enough for the judging window?
+- The audit write is best effort: a failed write is logged and does not block the customer's answer. Should it fail closed instead?
 - Should E4 use P90/P50 > 3, or a different ratio after the Monte Carlo range exists?

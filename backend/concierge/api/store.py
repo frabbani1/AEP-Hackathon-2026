@@ -75,6 +75,25 @@ def load_calibration() -> dict:
     return _s3_json("serving/risk/calibration.json")
 
 
+def load_evidence() -> dict | None:
+    """The published backtest report (serving/backtest/backtest.json), or None while none has been uploaded.
+
+    Local testing: set EVIDENCE_FILE. A missing file or object is not an error, because the report is published
+    only after the team has reviewed it.
+    """
+    if os.environ.get("EVIDENCE_FILE"):
+        p = Path(os.environ["EVIDENCE_FILE"])
+        return json.loads(p.read_text()) if p.exists() else None
+    from botocore.exceptions import ClientError
+    try:
+        return _s3_json("serving/backtest/backtest.json")
+    except ClientError as e:
+        # S3 answers AccessDenied instead of NoSuchKey when the caller cannot list the prefix.
+        if e.response.get("Error", {}).get("Code") in ("NoSuchKey", "AccessDenied"):
+            return None
+        raise
+
+
 def load_labor() -> dict:
     if os.environ.get("LABOR_FILE"):
         return json.loads(Path(os.environ["LABOR_FILE"]).read_text())

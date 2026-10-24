@@ -12,6 +12,7 @@ set -euo pipefail
 : "${RAW_BUCKET:?}" "${CLEAN_BUCKET:?}" "${AWS_REGION:?}"
 ACCT=$(aws sts get-caller-identity --query Account --output text)
 TABLE="${TABLE:-aep-premise-risk}"
+ALERTS_TABLE="${ALERTS_TABLE:-aep-demo-alerts}"                        # demo sign-ups, mock outbox, alert audit log
 BEDROCK_PROFILE="${BEDROCK_PROFILE:-us.amazon.nova-2-lite-v1:0}"      # cross-region inference profile the API calls
 BEDROCK_FOUNDATION="${BEDROCK_PROFILE#*.}"                              # underlying model id (profile minus "us.")
 # CloudFront may read three public-safe paths of the clean bucket (set after `make deploy`; kept on re-runs).
@@ -76,6 +77,9 @@ cat >"$TMP/api-policy.json" <<EOF
   "Condition":{"StringLike":{"s3:prefix":["curated/*","serving/*"]}}},
  {"Sid":"ReadPremiseTable","Effect":"Allow","Action":"dynamodb:GetItem",
   "Resource":"arn:aws:dynamodb:$AWS_REGION:$ACCT:table/$TABLE"},
+ {"Sid":"DemoAlertsTable","Effect":"Allow",
+  "Action":["dynamodb:GetItem","dynamodb:PutItem","dynamodb:DeleteItem","dynamodb:Query"],
+  "Resource":"arn:aws:dynamodb:$AWS_REGION:$ACCT:table/$ALERTS_TABLE"},
  {"Sid":"InvokeMessageModel","Effect":"Allow","Action":"bedrock:InvokeModel",
   "Resource":["arn:aws:bedrock:$AWS_REGION:$ACCT:inference-profile/$BEDROCK_PROFILE",
               "arn:aws:bedrock:*::foundation-model/$BEDROCK_FOUNDATION"]},

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" width="640" height="420" role="img" aria-labelledby="t d" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1f2933">
+<title id="t">Predicted and observed repair time per circuit</title>
+<desc id="d">Predicted P50 repair days against observed median repair days for Feb 2025, one anonymous point per circuit, with the identity line and a band of plus or minus one day.</desc>
+<rect width="640" height="420" fill="#ffffff"/>
+<text x="64" y="24" font-size="15" font-weight="bold">Predicted and observed repair time per circuit</text>
+<text x="340.0" y="206.0" text-anchor="middle" font-size="14" fill="#1f2933">Not run: the restoration engine was not available.</text>
+</svg>

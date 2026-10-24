@@ -1,0 +1,1371 @@
+{
+  "backtest_version": "backtest-v1",
+  "config": {
+    "backlog_primary": 3,
+    "backlog_sensitivity": 7,
+    "coverage_p90_high": 0.97,
+    "coverage_p90_low": 0.8,
+    "default_crews": 3,
+    "drop_largest": 3,
+    "fit_min_circuit_records": 3,
+    "fit_min_circuits": 8,
+    "fit_min_records": 30,
+    "hist_max_days": 10,
+    "k_bootstrap": 500,
+    "k_max": 20,
+    "k_min": 1,
+    "min_circuit_records": 10,
+    "min_group": 10,
+    "n_bootstrap": 2000,
+    "n_permutations": 10000,
+    "permutation_alpha": 0.05,
+    "sample": false,
+    "seed": 2026,
+    "sensitivity_min_size": 100,
+    "taus": [
+      1.0,
+      2.0,
+      5.0
+    ],
+    "within_days": 1.0
+  },
+  "config_hash": "sha256:14e1983378da0718c5f0835d0bf43e2911222a03958f4839cd9ba5e06a8f5201",
+  "git_hash": "865ade3fcd9ece75d693d24644ea9976a78c287d",
+  "inputs": {
+    "calibration.json": "sha256:7f4e0a0eeeb9e9a6164f18f28805159a2f3ba37c38234876223232ec48f9b137",
+    "circuit_dim.parquet": "sha256:6e07d60dc41bff2e9a751024b68434a31c78814a31d8d85ac3b2fad229c989b3",
+    "damage_fact.parquet": "sha256:b59ee48363896f04708779c5856936572bdee82e97a224394bd29ddb45404751",
+    "device_dim.parquet": "sha256:d046093c844ff715378c5ffe38998f2e5d775ffcb8f22e90c66f37237cdb832a"
+  },
+  "limits": [
+    "Two storms only: Sep 2024 and Feb 2025. Two points cannot show how the model behaves in other storms.",
+    "Sep 2024 is mostly repair backlog: most of its repairs took 20 days or more, so few usable records exist to calibrate on.",
+    "Crew counts were never recorded. Crews are a free setting, not an observation, and cannot be checked against data.",
+    "Repair time is not outage length. The data records when a damaged asset was fixed, not when customers got power.",
+    "Repair days are whole days, so nothing finer than about one day can be claimed.",
+    "Circuit level only. There are no outage labels for individual homes, so nothing here measures accuracy for a single address."
+  ],
+  "note": "These results describe two past storms. They are a check on the model, not a guarantee, and not confirmed utility information.",
+  "plots": [
+    "risk_bands.svg",
+    "restoration_scatter.svg",
+    "repair_hist.svg"
+  ],
+  "protocol": {
+    "calibrate_on": "Sep 2024 (S1)",
+    "hit_definition": "A circuit is a hit when it had at least 2 damage reports per 1,000 homes in Feb 2025.",
+    "rows": {
+      "S1": 193,
+      "S2": 1254,
+      "background": 212,
+      "total": 1659
+    },
+    "severity": "The Feb 2025 forecast uses the feb-2025-like preset: the regional storm size, not any circuit's outcome.",
+    "test_on": "Feb 2025 (S2)",
+    "unit": "circuit"
+  },
+  "restoration": {
+    "cutoffs": {
+      "3": {
+        "backlog": {
+          "S1": {
+            "backlog": 158,
+            "backlog_share": 0.8404255319148937,
+            "censored": 0,
+            "circuits_included": 2,
+            "cutoff_days": 3,
+            "excluded_share": 0.844559585492228,
+            "excluded_small": 2,
+            "records_in_included_circuits": 28,
+            "rows": 193,
+            "unmapped": 5,
+            "usable": 30
+          },
+          "S2": {
+            "backlog": 63,
+            "backlog_share": 0.0524126455906822,
+            "censored": 45,
+            "circuits_included": 21,
+            "cutoff_days": 3,
+            "excluded_share": 0.09170653907496018,
+            "excluded_small": 40,
+            "records_in_included_circuits": 1006,
+            "rows": 1254,
+            "unmapped": 7,
+            "usable": 1139
+          }
+        },
+        "baselines": {
+          "circuit_median": {
+            "circuits": 21,
+            "mae": 0.5238095238095238,
+            "prediction_days": 1.0
+          },
+          "constant": {
+            "circuits": 21,
+            "mae": 0.5238095238095238,
+            "prediction_days": 1.0
+          },
+          "one_day": {
+            "circuits": 21,
+            "mae": 0.5238095238095238,
+            "prediction_days": 1.0
+          }
+        },
+        "calibration": "uncalibrated",
+        "crews_used": 3,
+        "fit": {
+          "ci95": null,
+          "circuits_with_enough_records": 2,
+          "crews": 3,
+          "label": "uncalibrated",
+          "reason": "Sep 2024 has too few usable repair records to fit the number of crews.",
+          "records": 30,
+          "required": {
+            "min_circuits": 8,
+            "min_records": 30,
+            "min_records_per_circuit": 3
+          },
+          "status": "not_identifiable"
+        },
+        "histogram": {
+          "backlog_from_day": 4,
+          "bins": [
+            {
+              "count": 468,
+              "from_day": 0,
+              "to_day": 0
+            },
+            {
+              "count": 399,
+              "from_day": 1,
+              "to_day": 1
+            },
+            {
+              "count": 222,
+              "from_day": 2,
+              "to_day": 2
+            },
+            {
+              "count": 54,
+              "from_day": 3,
+              "to_day": 3
+            },
+            {
+              "count": 28,
+              "from_day": 4,
+              "to_day": 4
+            },
+            {
+              "count": 26,
+              "from_day": 5,
+              "to_day": 5
+            },
+            {
+              "count": 12,
+              "from_day": 6,
+              "to_day": null
+            }
+          ],
+          "predicted_p50_to_p90_days": null
+        },
+        "runs": {}
+      },
+      "7": {
+        "backlog": {
+          "S1": {
+            "backlog": 144,
+            "backlog_share": 0.7659574468085106,
+            "censored": 0,
+            "circuits_included": 2,
+            "cutoff_days": 7,
+            "excluded_share": 0.772020725388601,
+            "excluded_small": 3,
+            "records_in_included_circuits": 36,
+            "rows": 193,
+            "unmapped": 5,
+            "usable": 44
+          },
+          "S2": {
+            "backlog": 4,
+            "backlog_share": 0.0033277870216306157,
+            "censored": 45,
+            "circuits_included": 22,
+            "cutoff_days": 7,
+            "excluded_share": 0.044657097288676284,
+            "excluded_small": 41,
+            "records_in_included_circuits": 1064,
+            "rows": 1254,
+            "unmapped": 7,
+            "usable": 1198
+          }
+        },
+        "baselines": {
+          "circuit_median": {
+            "circuits": 22,
+            "mae": 0.7272727272727273,
+            "prediction_days": null
+          },
+          "constant": {
+            "circuits": 22,
+            "mae": 0.6818181818181818,
+            "prediction_days": 1.0
+          },
+          "one_day": {
+            "circuits": 22,
+            "mae": 0.6818181818181818,
+            "prediction_days": 1.0
+          }
+        },
+        "calibration": "uncalibrated",
+        "crews_used": 3,
+        "fit": {
+          "ci95": null,
+          "circuits_with_enough_records": 3,
+          "crews": 3,
+          "label": "uncalibrated",
+          "reason": "Sep 2024 has too few usable repair records to fit the number of crews.",
+          "records": 44,
+          "required": {
+            "min_circuits": 8,
+            "min_records": 30,
+            "min_records_per_circuit": 3
+          },
+          "status": "not_identifiable"
+        },
+        "histogram": {
+          "backlog_from_day": 8,
+          "bins": [
+            {
+              "count": 468,
+              "from_day": 0,
+              "to_day": 0
+            },
+            {
+              "count": 399,
+              "from_day": 1,
+              "to_day": 1
+            },
+            {
+              "count": 222,
+              "from_day": 2,
+              "to_day": 2
+            },
+            {
+              "count": 54,
+              "from_day": 3,
+              "to_day": 3
+            },
+            {
+              "count": 28,
+              "from_day": 4,
+              "to_day": 4
+            },
+            {
+              "count": 26,
+              "from_day": 5,
+              "to_day": 5
+            },
+            {
+              "count": 12,
+              "from_day": 6,
+              "to_day": null
+            }
+          ],
+          "predicted_p50_to_p90_days": null
+        },
+        "runs": {}
+      }
+    },
+    "engine_version": null,
+    "reason": "The restoration engine (spec-03, restoration-v2) is not available, so no model run was scored.",
+    "resolution_days": 1,
+    "status": "not_run"
+  },
+  "risk": {
+    "primary": {
+      "auc": {
+        "ci95": [
+          0.5890151515151515,
+          0.7807407407407407
+        ],
+        "n_resamples": 2000,
+        "value": 0.6871967151922359
+      },
+      "bands": {
+        "High": {
+          "beats_base_rate": false,
+          "ci95": [
+            0.5133177742669081,
+            0.8892198303144428
+          ],
+          "difference": 0.20841282990763565,
+          "eval_reports_per_1k": 25.495915985997666,
+          "hit_circuits": 12,
+          "hit_rate": 0.7442240373395566,
+          "lift": 1.3889669103909443,
+          "n_circuits": 18,
+          "premises": 17140,
+          "suppressed": false,
+          "vs_base": "overlaps"
+        },
+        "Low": {
+          "beats_base_rate": true,
+          "ci95": [
+            0.2731509358010282,
+            0.5104185812322339
+          ],
+          "difference": -0.15084152550024899,
+          "eval_reports_per_1k": 5.799978288851325,
+          "hit_circuits": 18,
+          "hit_rate": 0.3849696819316719,
+          "lift": 0.7184800851344368,
+          "n_circuits": 61,
+          "premises": 64483,
+          "suppressed": false,
+          "vs_base": "below"
+        },
+        "Medium": {
+          "beats_base_rate": false,
+          "ci95": [
+            0.5111807320905949,
+            0.8479042745063542
+          ],
+          "difference": 0.1713205150934104,
+          "eval_reports_per_1k": 11.997550384144304,
+          "hit_circuits": 17,
+          "hit_rate": 0.7071317225253313,
+          "lift": 1.319740447226793,
+          "n_circuits": 25,
+          "premises": 35924,
+          "suppressed": false,
+          "vs_base": "overlaps"
+        }
+      },
+      "base_rate": {
+        "per_circuit": 0.4519230769230769,
+        "premise_weighted": 0.5358112074319209
+      },
+      "min_circuit_premises": 50,
+      "monotone": true,
+      "n_circuits": 104,
+      "permutation": {
+        "n_shuffles": 10000,
+        "observed_gap": 0.35925435540788464,
+        "p_value": 0.009099090090990901
+      },
+      "size_baseline": {
+        "bands": {
+          "High": {
+            "beats_base_rate": false,
+            "ci95": [
+              0.40919956647880473,
+              0.815531745790751
+            ],
+            "difference": 0.1005357767365993,
+            "eval_reports_per_1k": 11.30446159884862,
+            "hit_circuits": 12,
+            "hit_rate": 0.6363469841685202,
+            "lift": 1.187632836607609,
+            "n_circuits": 18,
+            "premises": 38215,
+            "suppressed": false,
+            "vs_base": "overlaps"
+          },
+          "Low": {
+            "beats_base_rate": true,
+            "ci95": [
+              0.25507381038094484,
+              0.48991520531432203
+            ],
+            "difference": -0.17134661923432898,
+            "eval_reports_per_1k": 12.635626974316715,
+            "hit_circuits": 19,
+            "hit_rate": 0.3644645881975919,
+            "lift": 0.6802108338577447,
+            "n_circuits": 61,
+            "premises": 43686,
+            "suppressed": false,
+            "vs_base": "below"
+          },
+          "Medium": {
+            "beats_base_rate": false,
+            "ci95": [
+              0.4432887210515539,
+              0.7959904827721773
+            ],
+            "difference": 0.10221269426812962,
+            "eval_reports_per_1k": 7.237838747685575,
+            "hit_circuits": 16,
+            "hit_rate": 0.6380239017000505,
+            "lift": 1.190762516443101,
+            "n_circuits": 25,
+            "premises": 35646,
+            "suppressed": false,
+            "vs_base": "overlaps"
+          }
+        },
+        "spread": {
+          "ci95": [
+            -0.0807156388355173,
+            0.5604579354098063
+          ],
+          "value": 0.2718823959709283
+        }
+      },
+      "spearman": {
+        "n_circuits": 104,
+        "value": 0.3882880037926374
+      },
+      "spread": {
+        "ci95": [
+          0.002899193034674119,
+          0.6160688945134146
+        ],
+        "value": 0.35925435540788464
+      },
+      "tau_per_1k": 2.0,
+      "thresholds": {
+        "high": 3.2441200324412005,
+        "medium": 0.0
+      }
+    },
+    "sensitivity": {
+      "drop_largest_3": {
+        "auc": {
+          "ci95": [
+            0.5907097288676236,
+            0.7770800627943485
+          ],
+          "n_resamples": 2000,
+          "value": 0.6873517786561265
+        },
+        "bands": {
+          "High": {
+            "beats_base_rate": false,
+            "ci95": [
+              0.49824897997549766,
+              0.894054023969409
+            ],
+            "difference": 0.18942138658956553,
+            "eval_reports_per_1k": 27.26076330137244,
+            "hit_circuits": 11,
+            "hit_rate": 0.7432474775960394,
+            "lift": 1.3420232265427006,
+            "n_circuits": 16,
+            "premises": 15957,
+            "suppressed": false,
+            "vs_base": "overlaps"
+          },
+          "Low": {
+            "beats_base_rate": true,
+            "ci95": [
+              0.29160602526115886,
+              0.5328548898629156
+            ],
+            "difference": -0.14721522468159792,
+            "eval_reports_per_1k": 6.093266285564528,
+            "hit_circuits": 18,
+            "hit_rate": 0.4066108663248759,
+            "lift": 0.7341851041830438,
+            "n_circuits": 60,
+            "premises": 61051,
+            "suppressed": false,
+            "vs_base": "below"
+          },
+          "Medium": {
+            "beats_base_rate": true,
+            "ci95": [
+              0.5556028979154848,
+              0.8784700872689994
+            ],
+            "difference": 0.1965610971834626,
+            "eval_reports_per_1k": 13.576300787557255,
+            "hit_circuits": 17,
+            "hit_rate": 0.7503871881899364,
+            "lift": 1.354914837663661,
+            "n_circuits": 25,
+            "premises": 30347,
+            "suppressed": false,
+            "vs_base": "above"
+          }
+        },
+        "base_rate": {
+          "per_circuit": 0.45544554455445546,
+          "premise_weighted": 0.5538260910064738
+        },
+        "min_circuit_premises": 50,
+        "monotone": false,
+        "n_circuits": 101,
+        "permutation": {
+          "n_shuffles": 10000,
+          "observed_gap": 0.33663661127116346,
+          "p_value": 0.010298970102989701
+        },
+        "size_baseline": {
+          "bands": {
+            "High": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.5107821624267305,
+                0.9016445625788251
+              ],
+              "difference": 0.20189909983322085,
+              "eval_reports_per_1k": 14.084982773762075,
+              "hit_circuits": 12,
+              "hit_rate": 0.7557251908396947,
+              "lift": 1.3645532471507573,
+              "n_circuits": 16,
+              "premises": 29606,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            },
+            "Low": {
+              "beats_base_rate": true,
+              "ci95": [
+                0.23821542638906673,
+                0.47232974452933646
+              ],
+              "difference": -0.2078199194756044,
+              "eval_reports_per_1k": 12.625727274868678,
+              "hit_circuits": 18,
+              "hit_rate": 0.34600617153086943,
+              "lift": 0.6247559967824355,
+              "n_circuits": 60,
+              "premises": 42453,
+              "suppressed": false,
+              "vs_base": "below"
+            },
+            "Medium": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.4398575708200255,
+                0.7931990155462577
+              ],
+              "difference": 0.0806084058203621,
+              "eval_reports_per_1k": 7.536264732547598,
+              "hit_circuits": 16,
+              "hit_rate": 0.634434496826836,
+              "lift": 1.145548227375622,
+              "n_circuits": 25,
+              "premises": 35296,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            }
+          },
+          "spread": {
+            "ci95": [
+              0.03845241789739401,
+              0.6634291361897584
+            ],
+            "value": 0.40971901930882526
+          }
+        },
+        "spearman": {
+          "n_circuits": 101,
+          "value": 0.385699863086857
+        },
+        "spread": {
+          "ci95": [
+            -0.03460590988741796,
+            0.6024479987082502
+          ],
+          "value": 0.33663661127116346
+        },
+        "tau_per_1k": 2.0,
+        "thresholds": {
+          "high": 3.484320557491289,
+          "medium": 0.0
+        }
+      },
+      "min_size_100": {
+        "auc": {
+          "ci95": [
+            0.5887562572198691,
+            0.7730994152046784
+          ],
+          "n_resamples": 2000,
+          "value": 0.6827852998065764
+        },
+        "bands": {
+          "High": {
+            "beats_base_rate": false,
+            "ci95": [
+              0.5133177742669081,
+              0.8892198303144428
+            ],
+            "difference": 0.20765508665758925,
+            "eval_reports_per_1k": 25.495915985997666,
+            "hit_circuits": 12,
+            "hit_rate": 0.7442240373395566,
+            "lift": 1.3870054098241507,
+            "n_circuits": 18,
+            "premises": 17140,
+            "suppressed": false,
+            "vs_base": "overlaps"
+          },
+          "Low": {
+            "beats_base_rate": true,
+            "ci95": [
+              0.2723671365401108,
+              0.5135018821789347
+            ],
+            "difference": -0.15060567503167266,
+            "eval_reports_per_1k": 5.814947836497349,
+            "hit_circuits": 18,
+            "hit_rate": 0.38596327565029465,
+            "lift": 0.7193172008177958,
+            "n_circuits": 59,
+            "premises": 64317,
+            "suppressed": false,
+            "vs_base": "below"
+          },
+          "Medium": {
+            "beats_base_rate": false,
+            "ci95": [
+              0.5111807320905949,
+              0.8479042745063542
+            ],
+            "difference": 0.170562771843364,
+            "eval_reports_per_1k": 11.997550384144304,
+            "hit_circuits": 17,
+            "hit_rate": 0.7071317225253313,
+            "lift": 1.3178767083458378,
+            "n_circuits": 25,
+            "premises": 35924,
+            "suppressed": false,
+            "vs_base": "overlaps"
+          }
+        },
+        "base_rate": {
+          "per_circuit": 0.46078431372549017,
+          "premise_weighted": 0.5365689506819673
+        },
+        "min_circuit_premises": 100,
+        "monotone": true,
+        "n_circuits": 102,
+        "permutation": {
+          "n_shuffles": 10000,
+          "observed_gap": 0.3582607616892619,
+          "p_value": 0.006799320067993201
+        },
+        "size_baseline": {
+          "bands": {
+            "High": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.40919956647880473,
+                0.815531745790751
+              ],
+              "difference": 0.0997780334865529,
+              "eval_reports_per_1k": 11.30446159884862,
+              "hit_circuits": 12,
+              "hit_rate": 0.6363469841685202,
+              "lift": 1.185955660236652,
+              "n_circuits": 18,
+              "premises": 38215,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            },
+            "Low": {
+              "beats_base_rate": true,
+              "ci95": [
+                0.25468165691643496,
+                0.493428893588139
+              ],
+              "difference": -0.1707141712702026,
+              "eval_reports_per_1k": 12.683823529411764,
+              "hit_circuits": 19,
+              "hit_rate": 0.3658547794117647,
+              "lift": 0.6818411295449939,
+              "n_circuits": 59,
+              "premises": 43520,
+              "suppressed": false,
+              "vs_base": "below"
+            },
+            "Medium": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.4432887210515539,
+                0.7959904827721773
+              ],
+              "difference": 0.10145495101808322,
+              "eval_reports_per_1k": 7.237838747685575,
+              "hit_circuits": 16,
+              "hit_rate": 0.6380239017000505,
+              "lift": 1.1890809203349098,
+              "n_circuits": 25,
+              "premises": 35646,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            }
+          },
+          "spread": {
+            "ci95": [
+              -0.08422932710933428,
+              0.5608500888743161
+            ],
+            "value": 0.2704922047567555
+          }
+        },
+        "spearman": {
+          "n_circuits": 102,
+          "value": 0.3780993491240025
+        },
+        "spread": {
+          "ci95": [
+            -0.0001841079120266098,
+            0.616852693774332
+          ],
+          "value": 0.3582607616892619
+        },
+        "tau_per_1k": 2.0,
+        "thresholds": {
+          "high": 3.2441200324412005,
+          "medium": 0.0
+        }
+      },
+      "reverse": {
+        "auc": {
+          "ci95": [
+            0.5158891142663962,
+            0.7785714285714286
+          ],
+          "n_resamples": 2000,
+          "value": 0.6557649667405765
+        },
+        "bands": {
+          "High": {
+            "beats_base_rate": false,
+            "ci95": [
+              0.11540339225271132,
+              0.5436863587493328
+            ],
+            "difference": 0.10612775341585035,
+            "eval_reports_per_1k": 3.9374848558274778,
+            "hit_circuits": 4,
+            "hit_rate": 0.28277198933850256,
+            "lift": 1.60079941392665,
+            "n_circuits": 14,
+            "premises": 16508,
+            "suppressed": false,
+            "vs_base": "overlaps"
+          },
+          "Low": {
+            "beats_base_rate": false,
+            "ci95": [
+              0.06666628703687714,
+              0.23417026642063
+            ],
+            "difference": -0.0478864938409764,
+            "eval_reports_per_1k": 1.007100055390503,
+            "hit_circuits": 10,
+            "hit_rate": 0.1287577420816758,
+            "lift": 0.7289099551374854,
+            "n_circuits": 62,
+            "premises": 59577,
+            "suppressed": false,
+            "vs_base": "overlaps"
+          },
+          "Medium": {
+            "beats_base_rate": false,
+            "ci95": [
+              0.09472870890801721,
+              0.3832841456680607
+            ],
+            "difference": 0.026553873189305716,
+            "eval_reports_per_1k": 1.5194636052288844,
+            "hit_circuits": 8,
+            "hit_rate": 0.20319810911195793,
+            "lift": 1.1503240286930898,
+            "n_circuits": 28,
+            "premises": 41462,
+            "suppressed": false,
+            "vs_base": "overlaps"
+          }
+        },
+        "base_rate": {
+          "per_circuit": 0.21153846153846154,
+          "premise_weighted": 0.17664423592265222
+        },
+        "min_circuit_premises": 50,
+        "monotone": true,
+        "n_circuits": 104,
+        "permutation": {
+          "n_shuffles": 10000,
+          "observed_gap": 0.15401424725682675,
+          "p_value": 0.10628937106289371
+        },
+        "size_baseline": {
+          "bands": {
+            "High": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.027218862214004713,
+                0.3645845409137213
+              ],
+              "difference": -0.06418710744966521,
+              "eval_reports_per_1k": 1.3844750007866335,
+              "hit_circuits": 2,
+              "hit_rate": 0.112457128472987,
+              "lift": 0.6366306145547198,
+              "n_circuits": 14,
+              "premises": 31781,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            },
+            "Low": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.1916480580455874,
+                0.4121463016805048
+              ],
+              "difference": 0.11297823758816605,
+              "eval_reports_per_1k": 2.5598789065978096,
+              "hit_circuits": 17,
+              "hit_rate": 0.28962247351081827,
+              "lift": 1.6395806633488805,
+              "n_circuits": 62,
+              "premises": 44924,
+              "suppressed": false,
+              "vs_base": "above"
+            },
+            "Medium": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.034612477130118044,
+                0.26598748770093744
+              ],
+              "difference": -0.07432309591971406,
+              "eval_reports_per_1k": 0.7100533764262279,
+              "hit_circuits": 3,
+              "hit_rate": 0.10232114000293815,
+              "lift": 0.5792498094743485,
+              "n_circuits": 28,
+              "premises": 40842,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            }
+          },
+          "spread": {
+            "ci95": [
+              -0.3849274394665001,
+              0.17293648286813387
+            ],
+            "value": -0.17716534503783127
+          }
+        },
+        "spearman": {
+          "n_circuits": 104,
+          "value": 0.3882880037926374
+        },
+        "spread": {
+          "ci95": [
+            -0.11876687416791867,
+            0.47702007171245564
+          ],
+          "value": 0.15401424725682675
+        },
+        "tau_per_1k": 2.0,
+        "thresholds": {
+          "high": 12.976480129764802,
+          "medium": 2.5619128949615715
+        }
+      },
+      "tau": {
+        "1": {
+          "auc": {
+            "ci95": [
+              0.6190476190476191,
+              0.7968509984639017
+            ],
+            "n_resamples": 2000,
+            "value": 0.7098214285714286
+          },
+          "bands": {
+            "High": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.6250053729464254,
+                0.9496636965657949
+              ],
+              "difference": 0.20189553811782968,
+              "eval_reports_per_1k": 25.495915985997666,
+              "hit_circuits": 14,
+              "hit_rate": 0.8486581096849475,
+              "lift": 1.3121632991665442,
+              "n_circuits": 18,
+              "premises": 17140,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            },
+            "Low": {
+              "beats_base_rate": true,
+              "ci95": [
+                0.34638931226246006,
+                0.5892578154513061
+              ],
+              "difference": -0.1809653847116675,
+              "eval_reports_per_1k": 5.799978288851325,
+              "hit_circuits": 22,
+              "hit_rate": 0.4657971868554503,
+              "lift": 0.7201981180308795,
+              "n_circuits": 61,
+              "premises": 64483,
+              "suppressed": false,
+              "vs_base": "below"
+            },
+            "Medium": {
+              "beats_base_rate": true,
+              "ci95": [
+                0.6947419206086538,
+                0.9558191563881839
+              ],
+              "difference": 0.22850187559912205,
+              "eval_reports_per_1k": 11.997550384144304,
+              "hit_circuits": 20,
+              "hit_rate": 0.8752644471662399,
+              "lift": 1.3533010190207169,
+              "n_circuits": 25,
+              "premises": 35924,
+              "suppressed": false,
+              "vs_base": "above"
+            }
+          },
+          "base_rate": {
+            "per_circuit": 0.5384615384615384,
+            "premise_weighted": 0.6467625715671178
+          },
+          "min_circuit_premises": 50,
+          "monotone": false,
+          "n_circuits": 104,
+          "permutation": {
+            "n_shuffles": 10000,
+            "observed_gap": 0.3828609228294972,
+            "p_value": 0.0014998500149985001
+          },
+          "size_baseline": {
+            "bands": {
+              "High": {
+                "beats_base_rate": false,
+                "ci95": [
+                  0.5927800132036619,
+                  0.9342527610555907
+                ],
+                "difference": 0.17299406849568477,
+                "eval_reports_per_1k": 11.30446159884862,
+                "hit_circuits": 15,
+                "hit_rate": 0.8197566400628026,
+                "lift": 1.2674769321862842,
+                "n_circuits": 18,
+                "premises": 38215,
+                "suppressed": false,
+                "vs_base": "overlaps"
+              },
+              "Low": {
+                "beats_base_rate": true,
+                "ci95": [
+                  0.35207681921439316,
+                  0.5951207037111933
+                ],
+                "difference": -0.17482648220210384,
+                "eval_reports_per_1k": 12.635626974316715,
+                "hit_circuits": 24,
+                "hit_rate": 0.47193608936501397,
+                "lift": 0.7296898585542821,
+                "n_circuits": 61,
+                "premises": 43686,
+                "suppressed": false,
+                "vs_base": "below"
+              },
+              "Medium": {
+                "beats_base_rate": false,
+                "ci95": [
+                  0.479720942584739,
+                  0.824630532522763
+                ],
+                "difference": 0.02879709852209278,
+                "eval_reports_per_1k": 7.237838747685575,
+                "hit_circuits": 17,
+                "hit_rate": 0.6755596700892106,
+                "lift": 1.044524992304853,
+                "n_circuits": 25,
+                "premises": 35646,
+                "suppressed": false,
+                "vs_base": "overlaps"
+              }
+            },
+            "spread": {
+              "ci95": [
+                -0.0023406905075313844,
+                0.5821759418411976
+              ],
+              "value": 0.3478205506977886
+            }
+          },
+          "spearman": {
+            "n_circuits": 104,
+            "value": 0.3882880037926374
+          },
+          "spread": {
+            "ci95": [
+              0.035747557495119375,
+              0.6032743843033348
+            ],
+            "value": 0.3828609228294972
+          },
+          "tau_per_1k": 1.0,
+          "thresholds": {
+            "high": 3.2441200324412005,
+            "medium": 0.0
+          }
+        },
+        "2": {
+          "auc": {
+            "ci95": [
+              0.5890151515151515,
+              0.7807407407407407
+            ],
+            "n_resamples": 2000,
+            "value": 0.6871967151922359
+          },
+          "bands": {
+            "High": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.5133177742669081,
+                0.8892198303144428
+              ],
+              "difference": 0.20841282990763565,
+              "eval_reports_per_1k": 25.495915985997666,
+              "hit_circuits": 12,
+              "hit_rate": 0.7442240373395566,
+              "lift": 1.3889669103909443,
+              "n_circuits": 18,
+              "premises": 17140,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            },
+            "Low": {
+              "beats_base_rate": true,
+              "ci95": [
+                0.2731509358010282,
+                0.5104185812322339
+              ],
+              "difference": -0.15084152550024899,
+              "eval_reports_per_1k": 5.799978288851325,
+              "hit_circuits": 18,
+              "hit_rate": 0.3849696819316719,
+              "lift": 0.7184800851344368,
+              "n_circuits": 61,
+              "premises": 64483,
+              "suppressed": false,
+              "vs_base": "below"
+            },
+            "Medium": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.5111807320905949,
+                0.8479042745063542
+              ],
+              "difference": 0.1713205150934104,
+              "eval_reports_per_1k": 11.997550384144304,
+              "hit_circuits": 17,
+              "hit_rate": 0.7071317225253313,
+              "lift": 1.319740447226793,
+              "n_circuits": 25,
+              "premises": 35924,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            }
+          },
+          "base_rate": {
+            "per_circuit": 0.4519230769230769,
+            "premise_weighted": 0.5358112074319209
+          },
+          "min_circuit_premises": 50,
+          "monotone": true,
+          "n_circuits": 104,
+          "permutation": {
+            "n_shuffles": 10000,
+            "observed_gap": 0.35925435540788464,
+            "p_value": 0.009099090090990901
+          },
+          "size_baseline": {
+            "bands": {
+              "High": {
+                "beats_base_rate": false,
+                "ci95": [
+                  0.40919956647880473,
+                  0.815531745790751
+                ],
+                "difference": 0.1005357767365993,
+                "eval_reports_per_1k": 11.30446159884862,
+                "hit_circuits": 12,
+                "hit_rate": 0.6363469841685202,
+                "lift": 1.187632836607609,
+                "n_circuits": 18,
+                "premises": 38215,
+                "suppressed": false,
+                "vs_base": "overlaps"
+              },
+              "Low": {
+                "beats_base_rate": true,
+                "ci95": [
+                  0.25507381038094484,
+                  0.48991520531432203
+                ],
+                "difference": -0.17134661923432898,
+                "eval_reports_per_1k": 12.635626974316715,
+                "hit_circuits": 19,
+                "hit_rate": 0.3644645881975919,
+                "lift": 0.6802108338577447,
+                "n_circuits": 61,
+                "premises": 43686,
+                "suppressed": false,
+                "vs_base": "below"
+              },
+              "Medium": {
+                "beats_base_rate": false,
+                "ci95": [
+                  0.4432887210515539,
+                  0.7959904827721773
+                ],
+                "difference": 0.10221269426812962,
+                "eval_reports_per_1k": 7.237838747685575,
+                "hit_circuits": 16,
+                "hit_rate": 0.6380239017000505,
+                "lift": 1.190762516443101,
+                "n_circuits": 25,
+                "premises": 35646,
+                "suppressed": false,
+                "vs_base": "overlaps"
+              }
+            },
+            "spread": {
+              "ci95": [
+                -0.0807156388355173,
+                0.5604579354098063
+              ],
+              "value": 0.2718823959709283
+            }
+          },
+          "spearman": {
+            "n_circuits": 104,
+            "value": 0.3882880037926374
+          },
+          "spread": {
+            "ci95": [
+              0.002899193034674119,
+              0.6160688945134146
+            ],
+            "value": 0.35925435540788464
+          },
+          "tau_per_1k": 2.0,
+          "thresholds": {
+            "high": 3.2441200324412005,
+            "medium": 0.0
+          }
+        },
+        "5": {
+          "auc": {
+            "ci95": [
+              0.5589873417721519,
+              0.7787341772151899
+            ],
+            "n_resamples": 2000,
+            "value": 0.6724386724386724
+          },
+          "bands": {
+            "High": {
+              "beats_base_rate": true,
+              "ci95": [
+                0.34680676722113624,
+                0.7631073469777371
+              ],
+              "difference": 0.2644410549293527,
+              "eval_reports_per_1k": 25.495915985997666,
+              "hit_circuits": 8,
+              "hit_rate": 0.566686114352392,
+              "lift": 1.8749226718019765,
+              "n_circuits": 18,
+              "premises": 17140,
+              "suppressed": false,
+              "vs_base": "above"
+            },
+            "Low": {
+              "beats_base_rate": true,
+              "ci95": [
+                0.09861951790834626,
+                0.2869571730155389
+              ],
+              "difference": -0.12880399743770984,
+              "eval_reports_per_1k": 5.799978288851325,
+              "hit_circuits": 9,
+              "hit_rate": 0.17344106198532946,
+              "lift": 0.5738425048747332,
+              "n_circuits": 61,
+              "premises": 64483,
+              "suppressed": false,
+              "vs_base": "below"
+            },
+            "Medium": {
+              "beats_base_rate": false,
+              "ci95": [
+                0.2398868871052755,
+                0.5993669555268388
+              ],
+              "difference": 0.10503141313012848,
+              "eval_reports_per_1k": 11.997550384144304,
+              "hit_circuits": 10,
+              "hit_rate": 0.4072764725531678,
+              "lift": 1.3475041521956546,
+              "n_circuits": 25,
+              "premises": 35924,
+              "suppressed": false,
+              "vs_base": "overlaps"
+            }
+          },
+          "base_rate": {
+            "per_circuit": 0.25961538461538464,
+            "premise_weighted": 0.3022450594230393
+          },
+          "min_circuit_premises": 50,
+          "monotone": true,
+          "n_circuits": 104,
+          "permutation": {
+            "n_shuffles": 10000,
+            "observed_gap": 0.39324505236706253,
+            "p_value": 0.0030996900309969004
+          },
+          "size_baseline": {
+            "bands": {
+              "High": {
+                "beats_base_rate": false,
+                "ci95": [
+                  0.13416034848666178,
+                  0.5223701562137303
+                ],
+                "difference": -0.010631818549036942,
+                "eval_reports_per_1k": 11.30446159884862,
+                "hit_circuits": 6,
+                "hit_rate": 0.29161324087400237,
+                "lift": 0.9648238466847656,
+                "n_circuits": 18,
+                "premises": 38215,
+                "suppressed": false,
+                "vs_base": "overlaps"
+              },
+              "Low": {
+                "beats_base_rate": false,
+                "ci95": [
+                  0.1450258094807032,
+                  0.3533506583123676
+                ],
+                "difference": -0.06885221045540665,
+                "eval_reports_per_1k": 12.635626974316715,
+                "hit_circuits": 11,
+                "hit_rate": 0.23339284896763265,
+                "lift": 0.7721973997297431,
+                "n_circuits": 61,
+                "premises": 43686,
+                "suppressed": false,
+                "vs_base": "overlaps"
+              },
+              "Medium": {
+                "beats_base_rate": false,
+                "ci95": [
+                  0.23244714309988113,
+                  0.5907683231807566
+                ],
+                "difference": 0.09577996442255349,
+                "eval_reports_per_1k": 7.237838747685575,
+                "hit_circuits": 10,
+                "hit_rate": 0.3980250238455928,
+                "lift": 1.3168950539849666,
+                "n_circuits": 25,
+                "premises": 35646,
+                "suppressed": false,
+                "vs_base": "overlaps"
+              }
+            },
+            "spread": {
+              "ci95": [
+                -0.21919030982570584,
+                0.3773443467330271
+              ],
+              "value": 0.05822039190636971
+            }
+          },
+          "spearman": {
+            "n_circuits": 104,
+            "value": 0.3882880037926374
+          },
+          "spread": {
+            "ci95": [
+              0.05984959420559732,
+              0.6644878290693909
+            ],
+            "value": 0.39324505236706253
+          },
+          "tau_per_1k": 5.0,
+          "thresholds": {
+            "high": 3.2441200324412005,
+            "medium": 0.0
+          }
+        }
+      }
+    }
+  },
+  "sample": false,
+  "seed": 2026,
+  "spec02_check": "passed",
+  "spec02_config_hash": "sha256:cd1764e70b98985143e922336501a7c4cef53f575721bb8f95eadf4ffbb1de77",
+  "verdicts": [
+    {
+      "code": "risk_low_vs_base",
+      "level": "supports",
+      "sentence": "Low-risk areas: 38% of homes were on lines with significant damage, against 54% across all areas (95% range 27% to 51%). This is clearly below the base rate."
+    },
+    {
+      "code": "risk_high_vs_base",
+      "level": "mixed",
+      "sentence": "High-risk areas: 74% of homes were on lines with significant damage, against 54% across all areas (95% range 51% to 89%). The range reaches the base rate, so the model does not clearly beat the base rate here."
+    },
+    {
+      "code": "risk_medium_vs_high",
+      "level": "mixed",
+      "sentence": "Medium (71%) and High (74%) are not distinguishable: their ranges overlap."
+    },
+    {
+      "code": "risk_vs_size",
+      "level": "mixed",
+      "sentence": "The gap between High and Low areas is 36 percentage points for the risk bands and 27 when circuits are simply ranked by size. The risk bands do not beat the circuit-size baseline by more than the uncertainty."
+    },
+    {
+      "code": "risk_permutation",
+      "level": "supports",
+      "sentence": "The High-minus-Low gap is unlikely to be chance (permutation p = 0.009)."
+    },
+    {
+      "code": "rest_calibrated",
+      "level": "not_testable",
+      "sentence": "Sep 2024 has 30 usable repair records on 2 circuits, too few to fit the number of crews. The run uses a default of 3 crews and is uncalibrated."
+    },
+    {
+      "code": "rest_coverage_p90",
+      "level": "not_testable",
+      "sentence": "How often repairs finished within the predicted P90 was not tested."
+    },
+    {
+      "code": "rest_vs_baseline",
+      "level": "not_testable",
+      "sentence": "Whether the restoration range beats simple baselines was not tested."
+    },
+    {
+      "code": "rest_resolution",
+      "level": "not_testable",
+      "sentence": "Repair times are recorded in whole days, so the finest claim is about one day."
+    }
+  ]
+}

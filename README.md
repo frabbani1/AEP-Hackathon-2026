@@ -152,12 +152,19 @@ streamlit run app.py
 4. Show preparation guidance and alert eligibility.
 5. Generate a pre-storm and an "estimate updated" message.
 6. Show the privacy/uncertainty panel and trigger the fallback.
+7. Show the backtest (`docs/backtest.md`, `GET /evidence`). Say plainly: Low-risk areas had clearly less damage than average,
+   but High and Medium cannot be told apart, High does not clearly beat the base rate, and the risk bands do not beat a
+   simple circuit-size ranking by more than the uncertainty.
 
 ## 12. Limitations and Assumptions
 
 - Storm severity is simulated/calibrated, not live weather.
 - Labor and travel multipliers are representative averages.
 - Estimates are not confirmed utility restoration times.
+- Backtest (Sep 2024 -> Feb 2025, circuit level, `docs/backtest.md`): the risk bands separate Low from the rest, but the
+  model does not clearly beat the base rate for High or a circuit-size baseline. The restoration range has not been scored
+  against observed repair days yet. Only two storms exist, Sep 2024 is mostly repair backlog, crews were never recorded,
+  and repair time is not outage length.
 - Prototype scope: focused and explainable, not a production outage-management system.
 
 ## 13. Future Work

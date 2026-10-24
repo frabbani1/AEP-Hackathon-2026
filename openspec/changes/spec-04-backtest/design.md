@@ -180,3 +180,50 @@ bucket after review (project rule). The `/evidence` route ships with the next AP
 - Primary backlog cutoff: 3 days (brief) or 7 days (curated `is_backlog`)? The design runs both and uses 3 as the headline.
 - Should the report also give an S2 -> S1 restoration check? S1 has 44 usable records, so it is likely not informative.
 - Is circuit-pooled job completion the right proxy for "time to restore a customer"? Observed data cannot tell us.
+
+## Results (task 6.1)
+
+Run of 2026-10-24 on the real curated tables: `scripts/run_backtest.py` with seed 2026, 10,000 shuffles, 2,000 bootstrap
+resamples. The spec-02 forward, reverse and tau tables were re-computed and equal `artifacts/risk/calibration.json`.
+Full tables, sensitivity runs and plots: `docs/backtest.md` and `artifacts/backtest/`. These are verdicts from the rules in D6,
+not a team reading. Task 6.2 (reading them with the team) is still open.
+
+**Risk bands (104 circuits, tau = 2 per 1,000 homes)**
+
+| Item | Value |
+| --- | --- |
+| Base rate | 53.6% of homes (weighted), 45.2% of circuits (47 of 104) |
+| Low | 38% (95% range 27% to 51%), lift 0.72. Clearly below the base rate |
+| Medium | 71% (51% to 85%), lift 1.32. Overlaps the base rate |
+| High | 74% (51% to 89%), lift 1.39. Lower bound is below the base rate, so verdict `mixed` |
+| Medium vs High | Not distinguishable (ranges overlap) |
+| Size baseline (same group sizes) | Low 36%, Medium 64%, High 64%. High-minus-Low gap 27 points against 36 for the bands; the gap ranges overlap, so `mixed` |
+| Permutation p (High minus Low) | 0.009, so the gap is unlikely to be chance |
+| AUC | 0.69 (95% range 0.59 to 0.78) |
+| Spearman, Sep vs Feb rates | 0.39 |
+| Sensitivity | Same ordering for tau 1 and 5, without the 3 largest circuits, and for circuits of 100+ homes. Reverse direction (Feb to Sep) has permutation p = 0.11 |
+
+**Restoration (observed side only)**
+
+| Item | B = 3 | B = 7 |
+| --- | --- | --- |
+| Backlog share of mapped repairs, Sep 2024 | 84% | 77% |
+| Backlog share of mapped repairs, Feb 2025 | 5.2% | 0.3% |
+| Rows excluded in total (backlog, unrepaired, no circuit), Sep 2024 | 84% | 77% |
+| Rows excluded in total, Feb 2025 | 9.2% | 4.5% |
+| Feb 2025 circuits with 10+ usable records | 21 | 22 |
+| Sep 2024 usable records / circuits with 3+ | 30 / 2 | 44 / 3 |
+| Crews fit | not identifiable, so 3 crews, "uncalibrated" | not identifiable, so 3 crews, "uncalibrated" |
+| Baseline MAE vs observed circuit median (constant / circuit median / one day) | 0.52 / 0.52 / 0.52 days | 0.68 / 0.73 / 0.68 days |
+
+Still open: coverage of P50 and P90 for both runs, MAE of the model, and the fitted `k` interval. They need the spec-03 engine
+(`concierge/restoration/circuit.py`, see `backtest/adapter.py`). Re-run `scripts/run_backtest.py` once it exists and copy the
+numbers here. A flat one-day guess is already within about 0.5 to 0.7 days of the observed circuit medians, so the model has to be close to day-exact to beat it.
+
+## Notes on implementation
+
+- Backlog means `repair_days > B`. The data has nothing at 7 days, so `B = 7` gives the same set as the curated `is_backlog`.
+- Row classification order is: not repaired (censored), no circuit, backlog, usable.
+- Published histogram bins and risk bands with fewer than 10 records or circuits are merged or hidden (project privacy rule).
+- `/evidence` needs an API Gateway route (`GET /evidence` and `GET /api/evidence`) in `infra/lib/stack.ts`. That edit is
+  deliberately not made yet, so the `cdk diff` under team review (spec-05 task 6.1b) does not change.

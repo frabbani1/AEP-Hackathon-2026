@@ -31,6 +31,9 @@ markers = [
     "realdata: runs against the real files in data/ (needs CONCIERGE_TOKEN_SALT; slow)",
 ]
 
+[tool.setuptools.package-data]
+concierge = ["alerts/*.json"]
+
 [tool.setuptools.packages.find]
 where = ["backend"]
 include = ["concierge*"]

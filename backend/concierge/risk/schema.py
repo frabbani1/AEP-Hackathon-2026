@@ -33,7 +33,7 @@ RESULT_SCHEMA: dict[str, Any] = {
 }
 
 # Free-text values must never carry identifiers. Token and hash are exempt (they are opaque by design).
-_EXEMPT_KEYS = {"premise_token", "config_hash"}
+_EXEMPT_KEYS = {"premise_token", "config_hash", "token", "rules_table_hash"}
 _IDENTIFIER = re.compile(r"CIR\d+|STATION|SUBSTATION|\d{6,}", re.IGNORECASE)
 
 
