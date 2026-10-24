@@ -9,3 +9,9 @@ pipeline/.venv/
 pipeline/**/__pycache__/
 pipeline/**/*.egg-info/
 pipeline/.pytest_cache/
+
+# derived build outputs (may be large; regenerate with scripts/build_risk_artifacts.py)
+artifacts/
+__pycache__/
+.pytest_cache/
+.hypothesis/
