@@ -8,7 +8,10 @@ AI Outage Concierge, HackOHI/O 2026 AEP challenge (team: Faiz Rabbani, Parker Mi
 A customer picks an anonymized location before a storm and asks: Will I lose power? How long could
 restoration take? What should I do? Do I qualify for alerts? Challenge text: `docs/challenge.md`.
 
-Status: `spec-02-risk-engine` is implemented (backend only). Work is driven by OpenSpec changes in `openspec/changes/`.
+Status: backend only. `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, the labor-mapping
+review, is open) and `spec-02-risk-engine` are implemented. No frontend, API, Bedrock or CDK code exists yet.
+The two backends do not talk to each other yet (see "Circuit keys" and `pipeline/README.md`). Work is driven by
+OpenSpec changes in `openspec/changes/`.
 
 ## Core architecture rule
 
@@ -33,7 +36,9 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `data/Data1/` | Shapefiles: ARCOS damage, customers, poles, primary, fuse banks, hospitals, fire, ambulance |
 | `data/Data2/` | Shapefiles: secondary, transformers, switches, recloser banks |
 | `data/matched_upstream/matched_upstream.txt` | Premise -> upstream device chain (tab-separated) |
-| `backend/concierge/risk/` | Risk engine: loaders, storms, features, calibration, confidence, explanation, engine, build |
+| `pipeline/` | Offline curation pipeline (Python 3.12, GeoPandas): `data/` -> `curated/`. Own venv, tests, README |
+| `curated/` | Pipeline output (gitignored): `server/` (never to a browser), `public/` (zone level, browser-safe), `reports/` |
+| `backend/concierge/risk/` | Risk engine: loaders, storms, features, calibration, confidence, explanation, engine, build. Reads `data/` directly, not `curated/` |
 | `backend/tests/risk/` | Unit, property (hypothesis), synthetic-fixture, integration, and real-data tests |
 | `backend/concierge/curate/` | Data curation: raw files -> clean Parquet/JSON tables (`artifacts/curated/`) |
 | `scripts/curate.py` | Runs the curation pipeline (about 5 s) |
@@ -47,18 +52,19 @@ Never modify files under `data/`. Write derived outputs elsewhere (e.g. `artifac
 ## Verified data facts (checked 2026-10-24)
 
 - `.dbf` files are Git LFS objects. They are pulled in this checkout; on a fresh clone run `git lfs pull`.
-- ARCOS damage: 1,659 rows. `Event` is "Default" everywhere. Storms come from `Report_Tim` clusters:
-  2024-09-27..10-02 (193 rows) and 2025-02-12..02-18 (1,254 rows). 212 rows fall outside both storms.
+- ARCOS damage: 1,659 rows. `Event` is "Default" everywhere. Storms come from `Report_Tim` clusters
+  (risk design D5): 2024-09-27..10-02 (193 rows; 09-26 has a single row and is not part of it) and
+  2025-02-12..02-18 (1,254 rows). 212 rows fall outside both. Report dates span 2022-10 to 2026-08.
 - ARCOS `Asset_Type`: primary 704, Pole 355, Fuse Bank 280, secondary 156, Transformer 74,
-  Recloser Bank 58, Switch 19, Capacitor Bank 6, Light 5, Step Transformer 1, blank 1.
-  `Inform_Wor` IS a damage-type field: Damaged Wire 861, Switch 357, Pole 355, Equipment 81, Light 5. No quantity field.
-- ARCOS repairs: `Repaired = No` on 76 rows carries a placeholder `Repaired_D`; treat duration as unknown, not 0.
-  Real repairs take 0-6 days, then a 12-25+ day backlog tail.
-- **Circuit keys: ARCOS labels are NOT circuit numbers.** `CIR2` is circuit 16, `CIR6` is 5, `CIR10` is 9. Always
-  translate with `load_crosswalk()` (device layers' `aep_circui` -> `circuit_id`; 1:1 across 117 labels). The numeric
-  `circuit_id` is the real key (matches customers 117,615/117,615). Use `normalize_circuit()` only on numeric ids.
-  Primary/secondary line layers use a different label scheme; never use their `aep_circui`.
-  1,645 of 1,659 ARCOS rows map to a topology circuit (`TINKER`, `PENN FOREST`, `SERVICE CENTER` do not).
+  Recloser Bank 58, Switch 19, Capacitor Bank 6. No damage-type or quantity field.
+- Circuit keys: ARCOS `Circuit` = "CIR60", topology/customer = "0000060". Digit-normalizing both to int is fine for
+  joining customers to topology. It is NOT reliable for attributing damage to circuits: aliases and numeric ids are
+  not one-to-one (14 of 121 numeric ids carry more than one alias). Measured 2026-10-24: for ARCOS records that snap
+  (5 m) to a device or line layer, the alias digits disagree with the asset's circuit for 18% of in-storm records
+  (poles have no circuit field; nearest-line attribution differs from alias digits for only 3.7% of them), and the
+  topology sides with the snap in all 101 of 101 fuse-bank disagreements. The risk engine still uses alias digits
+  (open issue); the pipeline's `damage_records.parquet` carries the snap (`linked_asset_token`).
+  85 ARCOS aliases; 82 yield a number (3 aliases have no digits, 14 rows); 81 of those join the topology (CIR12 does not).
 - Topology: 117,599 premises, 110 circuits. Each line is `premise<TAB>class*id*type*name...`, ending at
   `eo_circuit*...*Circuit Breaker*<circuit>`. Protective types: Fuse, Recloser (Hydraulic/Electronic),
   Sectionalizer. `Step` is a step transformer (not protective). Chain length 2 to 13.
@@ -77,18 +83,28 @@ Load only whitelisted columns from source files.
 ## Commands
 
 ```bash
-.venv/bin/python -m pip install -e '.[dev]'     # pinned deps from pyproject.toml; add .[aws] for boto3
-.venv/bin/python -m pytest                       # 146 tests, ~6 s (includes real-data builds)
-CONCIERGE_TOKEN_SALT=<secret> .venv/bin/python scripts/curate.py
-CONCIERGE_TOKEN_SALT=<secret> .venv/bin/python scripts/build_risk_artifacts.py --sample
+# Risk engine (use your own venv, see Environment; <py> = that venv's python)
+<py> -m pip install 'pytest==9.1.1' 'hypothesis==6.170.9'
+<py> -m pytest                                   # 114 tests, ~4 s (includes the real-data build)
+CONCIERGE_TOKEN_SALT=<secret> <py> scripts/build_risk_artifacts.py --sample
+
+# Data pipeline (Python 3.12 venv at pipeline/.venv; setup in pipeline/README.md)
+AEP_TOKEN_KEY=<secret, 16+ chars> pipeline/.venv/bin/python -m aep_pipeline run --raw data --out curated
+cd pipeline && .venv/bin/python -m pytest        # 197 tests (185 synthetic + 12 real-data), ~45 s
 ```
 
 Risk API: `RiskEngine.from_artifacts("artifacts/risk").score(token, "typical" | "feb-2025-like" | 1.4).to_dict()`.
+Do not rerun the pipeline into `curated/` with a different `AEP_TOKEN_KEY` unless you mean to: tokens change with the key.
 
 ## Environment
 
-- Python 3.11 venv in `.venv/` (pytest and hypothesis installed). The risk engine itself uses only the standard library. Pin exact dependency versions.
-- `CONCIERGE_TOKEN_SALT` must be set to build artifacts. Never commit it.
-- `.venv/` currently also holds empty `pyproject.toml`, `Dockerfile`, `docker-compose.yml`, `.env`.
-  These look misplaced; real project files belong at the repo root.
-- OpenSpec CLI is not installed (`npm i -g @fission-ai/openspec` to get `openspec validate`).
+- The root `.venv/` is tracked in git (2,105 files), was built on another machine, and has no working interpreter
+  on other checkouts, so `.venv/bin/python` fails there. Make your own venv outside the repo. Python 3.12 matches
+  the pipeline and the Lambda runtime, and the risk tests pass on it. Untracking `.venv/` is pending a team decision.
+- The risk engine itself uses only the standard library. Pin exact dependency versions.
+- `CONCIERGE_TOKEN_SALT` (risk engine) and `AEP_TOKEN_KEY` (pipeline) are separate secrets that produce incompatible
+  token formats. Never commit either.
+- `.venv/` also holds empty, tracked `pyproject.toml`, `Dockerfile`, `docker-compose.yml`, `.env`. They are misplaced
+  and should go with the venv.
+- OpenSpec CLI 1.15.0 is installed (`openspec validate <change> --strict`). `curate-challenge-data` validates;
+  `spec-02-risk-engine` has one warning (an over-long requirement) that fails `--strict`.
