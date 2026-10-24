@@ -1,0 +1,218 @@
+{
+ "damage_restricted": {
+  "assumptions": [
+   "2 repair crews work on your line, 16 hours out of every 24.",
+   "Crews fix main line damage first, then branch lines, then repairs near homes (step restoration).",
+   "Labor hours come from the STORMS reference sheet times a 4.5x multiplier for travel and non-productive time.",
+   "Which hardware a repair replaces is an engineering assumption that has not been reviewed by the utility.",
+   "Work sites are restricted to reach, which adds time to every repair.",
+   "Only the damage you entered is counted, and no other repairs are ahead of yours."
+  ],
+  "confidence": {
+   "level": "High",
+   "reason": "Based on the damage you entered, not on past reports."
+  },
+  "could_change": [
+   "How many crews are sent, and how soon they can start.",
+   "Whether trees, flooding or blocked roads slow the work.",
+   "Damage that is found only after crews arrive."
+  ],
+  "engine_version": "restoration-v1",
+  "estimate": {
+   "display": "about 1 to 2 days",
+   "high_hours": 59,
+   "low_hours": 32,
+   "typical_hours": 42
+  },
+  "fallback": null,
+  "missing_data": [
+   "No live crew locations, road conditions, or weather are used.",
+   "Damage reports show repairs, not which homes lost power.",
+   "Size of the damaged equipment is not known, so typical sizes are used."
+  ],
+  "model_note": "This is a model estimate, not a restoration time confirmed by the utility.",
+  "premise_token": "p_00000000000000a2",
+  "scenario": {
+   "access": "restricted",
+   "crews": 2,
+   "damage_source": "you_provided"
+  },
+  "sensitivity": [
+   {
+    "change": "One more crew",
+    "typical_hours": 28
+   },
+   {
+    "change": "One fewer crew",
+    "typical_hours": 84
+   }
+  ],
+  "severity": {
+   "extrapolated": false,
+   "multiplier": 1.0,
+   "preset": "typical"
+  },
+  "status": "ok",
+  "steps": [
+   {
+    "done_by_hours": 22,
+    "label": "Main line repairs finish",
+    "stage": "feeder"
+   },
+   {
+    "done_by_hours": 35,
+    "label": "Branch line repairs finish",
+    "stage": "lateral"
+   },
+   {
+    "done_by_hours": 42,
+    "label": "Repairs near your home finish and your power returns",
+    "stage": "service"
+   }
+  ]
+ },
+ "floor_remote": {
+  "assumptions": [
+   "1 repair crews work on your line, 16 hours out of every 24.",
+   "Crews fix main line damage first, then branch lines, then repairs near homes (step restoration).",
+   "Labor hours come from the STORMS reference sheet times a 4.5x multiplier for travel and non-productive time.",
+   "Which hardware a repair replaces is an engineering assumption that has not been reviewed by the utility.",
+   "Work sites are remote to reach, which adds time to every repair.",
+   "Damage is simulated from past storms on your line and the storm scenario you chose, and your outage is assumed to need at least one repair."
+  ],
+  "confidence": {
+   "level": "Low",
+   "reason": "Based on past damage reports on your line."
+  },
+  "could_change": [
+   "How many crews are sent, and how soon they can start.",
+   "Whether trees, flooding or blocked roads slow the work.",
+   "Damage that is found only after crews arrive."
+  ],
+  "engine_version": "restoration-v1",
+  "estimate": {
+   "display": "about 1 to 3 days",
+   "high_hours": 74,
+   "low_hours": 18,
+   "typical_hours": 37
+  },
+  "fallback": null,
+  "missing_data": [
+   "No live crew locations, road conditions, or weather are used.",
+   "Damage reports show repairs, not which homes lost power.",
+   "Size of the damaged equipment is not known, so typical sizes are used.",
+   "Your line has no damage history, so the estimate is a rough placeholder."
+  ],
+  "model_note": "This is a model estimate, not a restoration time confirmed by the utility.",
+  "premise_token": "p_00000000000000a3",
+  "scenario": {
+   "access": "remote",
+   "crews": 1,
+   "damage_source": "simulated"
+  },
+  "sensitivity": [
+   {
+    "change": "One more crew",
+    "typical_hours": 18
+   }
+  ],
+  "severity": {
+   "extrapolated": false,
+   "multiplier": 1.0,
+   "preset": "typical"
+  },
+  "status": "ok",
+  "steps": [
+   {
+    "done_by_hours": 29,
+    "label": "Main line repairs finish",
+    "stage": "feeder"
+   },
+   {
+    "done_by_hours": 35,
+    "label": "Branch line repairs finish",
+    "stage": "lateral"
+   },
+   {
+    "done_by_hours": 37,
+    "label": "Repairs near your home finish and your power returns",
+    "stage": "service"
+   }
+  ]
+ },
+ "simulated_normal": {
+  "assumptions": [
+   "3 repair crews work on your line, 16 hours out of every 24.",
+   "Crews fix main line damage first, then branch lines, then repairs near homes (step restoration).",
+   "Labor hours come from the STORMS reference sheet times a 4.5x multiplier for travel and non-productive time.",
+   "Which hardware a repair replaces is an engineering assumption that has not been reviewed by the utility.",
+   "Damage is simulated from past storms on your line and the storm scenario you chose, and your outage is assumed to need at least one repair."
+  ],
+  "confidence": {
+   "level": "Medium",
+   "reason": "Based on past damage reports on your line."
+  },
+  "could_change": [
+   "How many crews are sent, and how soon they can start.",
+   "Whether trees, flooding or blocked roads slow the work.",
+   "Damage that is found only after crews arrive."
+  ],
+  "engine_version": "restoration-v1",
+  "estimate": {
+   "display": "about 7 to 17 hours",
+   "high_hours": 17,
+   "low_hours": 7,
+   "typical_hours": 11
+  },
+  "fallback": null,
+  "missing_data": [
+   "No live crew locations, road conditions, or weather are used.",
+   "Damage reports show repairs, not which homes lost power.",
+   "Size of the damaged equipment is not known, so typical sizes are used."
+  ],
+  "model_note": "This is a model estimate, not a restoration time confirmed by the utility.",
+  "premise_token": "p_00000000000000a1",
+  "scenario": {
+   "access": "normal",
+   "crews": 3,
+   "damage_source": "simulated"
+  },
+  "sensitivity": [
+   {
+    "change": "One more crew",
+    "typical_hours": 8
+   },
+   {
+    "change": "One fewer crew",
+    "typical_hours": 16
+   },
+   {
+    "change": "Hard-to-reach work sites",
+    "typical_hours": 12
+   }
+  ],
+  "severity": {
+   "extrapolated": false,
+   "multiplier": 1.0,
+   "preset": "typical"
+  },
+  "status": "ok",
+  "steps": [
+   {
+    "done_by_hours": 9,
+    "label": "Main line repairs finish",
+    "stage": "feeder"
+   },
+   {
+    "done_by_hours": 10,
+    "label": "Branch line repairs finish",
+    "stage": "lateral"
+   },
+   {
+    "done_by_hours": 11,
+    "label": "Repairs near your home finish and your power returns",
+    "stage": "service"
+   }
+  ]
+ }
+}

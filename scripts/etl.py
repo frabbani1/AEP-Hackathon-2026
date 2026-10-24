@@ -37,6 +37,8 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from concierge.curate.network import MIN_GROUP  # noqa: E402
 from concierge.curate.pipeline import curate, sha256  # noqa: E402
+from concierge.curate.restoration_tree import TREE_FILE  # noqa: E402
+from concierge.curate.restoration_tree import enrich_risk_rows as enrich  # noqa: E402
 from concierge.risk.build import build_artifacts  # noqa: E402
 from concierge.risk.load import normalize_circuit  # noqa: E402
 from concierge.risk.tokens import SALT_ENV  # noqa: E402
@@ -174,7 +176,7 @@ def sanitize(run_dir: Path) -> dict:
     if (src / "drawings").exists():
         shutil.copytree(src / "drawings", clean / "curated/drawings")
     (clean / "serving/risk").mkdir(parents=True)
-    for f in ("premise_risk.jsonl", "calibration.json"):
+    for f in ("premise_risk.jsonl", "calibration.json", TREE_FILE):
         shutil.copy2(run_dir / "risk" / f, clean / "serving/risk" / f)
     report["rows"]["premise_risk"] = sum(1 for _ in open(clean / "serving/risk/premise_risk.jsonl"))
     # internal/ (crosswalk, quality report) is deliberately NOT copied: it stays in the raw bucket's staging/.
@@ -182,50 +184,17 @@ def sanitize(run_dir: Path) -> dict:
 
 
 def enrich_risk_rows(run_dir: Path) -> dict:
-    """Add the line context the restoration model needs to every premise_risk row (server-side use only).
+    """Add line context and tree position to every scored premise_risk row, and write restoration_tree.json.
 
       cn  homes on the premise's circuit            n0  homes served by its transformer
       nl  homes served by its nearest protective    nf  homes served by its farthest protective device
           device (branch)                               before the breaker (main line)
+      pc, pn  opaque circuit index and node index in restoration_tree.json    ap  1 if its chain uses an alternate feed
 
-    Derived only from the clean device_dim / premise_dim tables. The API uses them as exposure weights and never
-    returns them. Premises without a chain (or on fallback) get no context.
+    Derived only from the clean device_dim / premise_dim tables (concierge.curate.restoration_tree). The API uses these
+    fields as weights and positions and never returns them. Premises without a chain (or on fallback) get none.
     """
-    tables = run_dir / "curated/tables"
-    dev = {d["device_key"]: d for d in pq.read_table(
-        tables / "device_dim.parquet",
-        columns=["device_key", "device_class", "parent_key", "is_protective", "n_premises_served"]).to_pylist()}
-    pd = pq.read_table(tables / "premise_dim.parquet", columns=["premise_token", "transformer_key"])
-    prem = dict(zip(pd.column("premise_token").to_pylist(), pd.column("transformer_key").to_pylist()))
-    cache: dict[str, tuple[int, int, int, int] | None] = {}
-
-    def context(key: str | None):
-        if key is None:
-            return None
-        if key not in cache:
-            chain, k = [], key
-            while k is not None and len(chain) < 64:
-                chain.append(dev[k])
-                k = dev[k]["parent_key"]
-            if not chain or chain[-1]["device_class"] != "breaker":
-                cache[key] = None
-            else:
-                prot = [d["n_premises_served"] for d in chain if d["is_protective"]]
-                cn = chain[-1]["n_premises_served"]
-                cache[key] = (cn, chain[0]["n_premises_served"], prot[0] if prot else cn, prot[-1] if prot else cn)
-        return cache[key]
-
-    path = run_dir / "risk/premise_risk.jsonl"
-    out, n_ctx = [], 0
-    for line in open(path, encoding="utf-8"):
-        row = json.loads(line)
-        ctx = context(prem.get(row["t"])) if row.get("st") == "ok" else None
-        if ctx:
-            row.update(cn=ctx[0], n0=ctx[1], nl=ctx[2], nf=ctx[3])
-            n_ctx += 1
-        out.append(json.dumps(row, sort_keys=True))
-    path.write_text("\n".join(out) + "\n", encoding="utf-8")
-    return {"rows": len(out), "with_line_context": n_ctx}
+    return enrich(run_dir / "curated/tables", run_dir / "risk")
 
 
 def write_manifest(clean: Path) -> dict:

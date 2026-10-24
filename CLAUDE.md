@@ -9,7 +9,8 @@ A customer picks an anonymized location before a storm and asks: Will I lose pow
 restoration take? What should I do? Do I qualify for alerts? Challenge text: `docs/challenge.md`.
 
 Status: `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, the labor-mapping
-review, is open) and `spec-02-risk-engine` are implemented. The frontend has two pages (chat home at `/`, outage
+review, is open), `spec-02-risk-engine` and `spec-03-restoration-engine` (7.4, removing the one-release `low/typical/high_hours`
+shim, waits for spec-05 and spec-06) are implemented. The frontend has two pages (chat home at `/`, outage
 map at `/map`, see `frontend/`) running on a mock client. The map page shows clearly labeled sample data
 (`frontend/src/api/sample/`), not engine output. No API, Bedrock or CDK code exists yet.
 The two backends do not talk to each other yet (see "Circuit keys" and `pipeline/README.md`). Work is driven by
@@ -42,6 +43,9 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `curated/` | Pipeline output (gitignored): `server/` (never to a browser), `public/` (zone level, browser-safe), `reports/` |
 | `backend/concierge/risk/` | Risk engine: loaders, storms, features, calibration, confidence, explanation, engine, build. Reads `data/` directly, not `curated/` |
 | `backend/tests/risk/` | Unit, property (hypothesis), synthetic-fixture, integration, and real-data tests |
+| `backend/concierge/restoration/` | Restoration engine v2: `config` (assumptions), `jobs` (pricing, plan), `tree` (runtime tree), `schedule` (step restoration), `montecarlo` (seeded P50/P90), `model` (contract, `RESTORATION_ENGINE` switch), `v1` (frozen first version). Tree builder: `backend/concierge/curate/restoration_tree.py`. Rules in `docs/restoration-tree.md` |
+| `backend/tests/restoration/` | Golden v1 tests, tree/jobs/scheduler/Monte Carlo/model/service tests, real-data checks (skipped without `artifacts/`) |
+| `scripts/profile_restoration.py` | Latency and scenario-table report for the restoration engine on the real artifacts |
 | `frontend/` | React + TS + Vite, styled after aepohio.com. Pages: chat home and outage map (Leaflet). `src/api/types.ts` is the API contract; `src/api/mockClient.ts` is the stub to replace; `src/api/sample/` is placeholder map data to delete. `VITE_BASEMAP_URL` (empty = no tiles) sets the map background. `npm run dev` / `npm run build` |
 | `backend/concierge/curate/` | Data curation: raw files -> clean Parquet/JSON tables (`artifacts/curated/`) |
 | `scripts/curate.py` | Runs the curation pipeline (about 5 s) |
@@ -91,8 +95,10 @@ Load only whitelisted columns from source files.
 ```bash
 # Risk engine (use your own venv, see Environment; <py> = that venv's python)
 <py> -m pip install 'pytest==9.1.1' 'hypothesis==6.170.9'
-<py> -m pytest                                   # 114 tests, ~4 s (includes the real-data build)
-CONCIERGE_TOKEN_SALT=<secret> <py> scripts/build_risk_artifacts.py --sample
+<py> -m pytest                                   # 386 tests, ~35 s (real-data restoration tests need artifacts/, see below)
+CONCIERGE_TOKEN_SALT=<secret> <py> scripts/curate.py --no-drawings            # artifacts/curated (same salt as the next line)
+CONCIERGE_TOKEN_SALT=<secret> <py> scripts/build_risk_artifacts.py --sample   # artifacts/risk, incl. restoration_tree.json and pc/pn on rows
+<py> scripts/profile_restoration.py [--cases --severity typical]              # restoration latency / scenario table
 
 # Data pipeline (Python 3.12 venv at pipeline/.venv; setup in pipeline/README.md)
 AEP_TOKEN_KEY=<secret, 16+ chars> pipeline/.venv/bin/python -m aep_pipeline run --raw data --out curated

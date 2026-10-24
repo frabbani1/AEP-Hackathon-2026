@@ -98,11 +98,14 @@ COLUMNS: dict[str, dict[str, tuple[str, str]]] = {
     },
 }
 
-JSONL = {  # serving/risk/premise_risk.jsonl keys (also the DynamoDB item attributes; the API never returns cn/n0/nl/nf)
+JSONL = {  # serving/risk/premise_risk.jsonl keys (also the DynamoDB item attributes; the API never returns cn/n0/nl/nf/pc/pn/ap)
     "cn": ("int", "Homes on the premise's line. Server-side exposure weight for restoration; never returned"),
     "n0": ("int", "Homes served by the premise's transformer. Server-side only; never returned"),
     "nl": ("int", "Homes served by its nearest protective device (branch). Server-side only; never returned"),
     "nf": ("int", "Homes served by its farthest protective device before the breaker (main line). Server-side only; never returned"),
+    "pc": ("int", "Opaque circuit index into serving/risk/restoration_tree.json (not the circuit number). Server-side only; never returned"),
+    "pn": ("int", "Node index of the premise's transformer, or of its nearest ancestor that serves 10+ premises, in restoration_tree.json. Server-side only; never returned"),
+    "ap": ("int", "1 if the premise's chain uses an alternate feed that the tree does not follow. Server-side only; its only effect is a note in the assumptions"),
     "t": ("string", "premise_token"), "st": ("string", "ok or fb (fallback)"),
     "why": ("string", "Fallback reason code (no_circuit, circuit_too_small, no_history_small_circuit)"),
     "R": ("float", "Circuit damage reports per 1,000 premises per storm"), "Re": ("float", "R / k_bar (shrunk rate)"),
