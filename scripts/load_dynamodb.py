@@ -49,7 +49,8 @@ def write_items(table, items: Iterable[dict]) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--table", required=True)
-    ap.add_argument("--file", type=Path, default=ROOT / "artifacts" / "risk" / "premise_risk.jsonl")
+    # data/serving/ is the ETL mirror of the clean bucket: same salt as the published tables, plus line context.
+    ap.add_argument("--file", type=Path, default=ROOT / "data" / "serving" / "risk" / "premise_risk.jsonl")
     ap.add_argument("--region", default=None)
     ap.add_argument("--apply", action="store_true", help="actually write to DynamoDB")
     args = ap.parse_args()

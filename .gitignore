@@ -16,3 +16,19 @@ __pycache__/
 .pytest_cache/
 .hypothesis/
 *.egg-info/
+
+# CDK / Node
+node_modules/
+cdk.out/
+cdk-outputs.json
+infra/dist/
+
+# Raw and extracted data never goes into Git (the repo is public). Docs only.
+# NOTE: files under data/ that were committed before this rule are still tracked; see docs/pipeline.md.
+data/
+raw/
+council_out/
+.etl_work/
+*.zip
+*.parquet
+*.jsonl
