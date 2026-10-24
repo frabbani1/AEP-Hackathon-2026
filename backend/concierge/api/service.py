@@ -7,7 +7,9 @@ from typing import Any
 from ..alerts import rules as alert_rules
 from ..guidance import prepare
 from ..messages import compose as msg
+from ..restoration import config as rest_config
 from ..restoration import model as rest
+from ..restoration.tree import RestorationTree
 from ..risk.confidence import FALLBACK_MESSAGES, downgrade
 from ..risk.engine import RiskEngine
 from ..risk.schema import WhitelistError, _scan_strings
@@ -32,10 +34,16 @@ def _only(body: Mapping, allowed: set[str]) -> None:
 
 class Concierge:
     def __init__(self, rows, calibration: Mapping, labor: Mapping,
-                 phraser: Callable[[Mapping], str] | None = None, model_id: str | None = None):
+                 phraser: Callable[[Mapping], str] | None = None, model_id: str | None = None,
+                 tree: RestorationTree | None = None, restoration_engine: str | None = None):
         self.rows, self.labor = rows, labor
         self.engine = RiskEngine(rows, calibration)
         self.phraser, self.model_id = phraser, model_id
+        self.tree = tree
+        # "v1" or "v2". Read once, so a bad RESTORATION_ENGINE value fails at start-up instead of on a request.
+        self.restoration_engine = restoration_engine or rest_config.engine_from_env()
+        if self.restoration_engine not in rest_config.ENGINES:
+            raise ValueError(f"restoration_engine must be one of {list(rest_config.ENGINES)}")
 
     # ---- input parsing ----------------------------------------------------------------------------------------
     @staticmethod
@@ -66,7 +74,12 @@ class Concierge:
         access = body.get("access", "normal")
         if access not in rest.ACCESS_LEVELS:
             raise BadRequest(f"access must be one of {list(rest.ACCESS_LEVELS)}")
-        damage = body.get("damage")
+        damage, damage_count = body.get("damage"), body.get("damage_count")
+        if damage is not None and damage_count is not None:
+            raise BadRequest("send either damage_count or damage, not both")
+        if damage_count is not None:
+            damage_count = _int(damage_count, "damage_count", rest_config.DAMAGE_COUNT_MIN,
+                                rest_config.DAMAGE_COUNT_MAX)
         items = None
         if damage is not None:
             if not isinstance(damage, list) or not (1 <= len(damage) <= 10):
@@ -78,7 +91,7 @@ class Concierge:
                 if d["asset_type"] not in rest.ASSET_LEVEL:
                     raise BadRequest(f"asset_type must be one of {sorted(rest.ASSET_LEVEL)}")
                 items.append((d["asset_type"], _int(d["qty"], "qty", 1, rest.MAX_JOBS_PER_ASSET)))
-        return {"crews": crews, "access": access, "damage": items}
+        return {"crews": crews, "access": access, "damage": items, "damage_count": damage_count}
 
     # ---- engines ----------------------------------------------------------------------------------------------
     def risk(self, token: str, severity: Any) -> dict:
@@ -99,7 +112,8 @@ class Concierge:
                 level = downgrade(level)
         try:
             return rest.estimate(token=token if row else None, row=row, severity=sev_out, fallback=fallback,
-                                 base_confidence=level, labor=self.labor, **scenario)
+                                 base_confidence=level, labor=self.labor, tree=self.tree,
+                                 engine=self.restoration_engine, **scenario)
         except rest.RestorationError as e:
             raise BadRequest(str(e)) from None
 
@@ -158,10 +172,10 @@ class Concierge:
             _only(body, common)
             out = self.risk(self.token(body), self.severity(body))
         elif route == "restoration":
-            _only(body, common | {"crews", "access", "damage"})
+            _only(body, common | {"crews", "access", "damage", "damage_count"})
             out = self.restoration(self.token(body), self.severity(body), self.scenario(body))
         elif route in ("guidance", "alerts", "summary", "messages"):
-            allowed = common | {"crews", "access", "damage", "needs"}
+            allowed = common | {"crews", "access", "damage", "damage_count", "needs"}
             if route in ("alerts", "summary"):
                 allowed |= {"channels", "prior_typical_hours"}
             if route == "messages":

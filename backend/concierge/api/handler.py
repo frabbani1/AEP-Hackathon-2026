@@ -3,8 +3,8 @@
 Routes (POST unless noted; also reachable under /api/ when served through CloudFront):
   GET  /health
   POST /risk         {token, severity?}
-  POST /restoration  {token, severity?, crews?, access?, damage?}
-  POST /guidance     {token, severity?, needs?, crews?, access?, damage?}
+  POST /restoration  {token, severity?, crews?, access?, damage? | damage_count?}
+  POST /guidance     {token, severity?, needs?, crews?, access?, damage? | damage_count?}
   POST /alerts       {token, severity?, needs?, channels?, prior_typical_hours?, ...}
   POST /messages     {token, message_type, channel?, severity?, needs?, use_llm?, prior_estimate?}
   POST /summary      risk + restoration + guidance + alerts in one call
@@ -28,13 +28,17 @@ _service: Concierge | None = None
 
 def _build() -> Concierge:
     from . import store
+    from ..restoration import config as rest_config
+    engine = rest_config.engine_from_env()
+    tree = store.load_tree() if engine == "v2" else None
     phraser, model_id = None, os.environ.get("BEDROCK_MODEL_ID")
     if model_id:
         import boto3
 
         from ..messages.compose import make_bedrock_phraser
         phraser = make_bedrock_phraser(boto3.client("bedrock-runtime"), model_id)
-    return Concierge(store.load_rows(), store.load_calibration(), store.load_labor(), phraser, model_id)
+    return Concierge(store.load_rows(), store.load_calibration(), store.load_labor(), phraser, model_id,
+                     tree=tree, restoration_engine=engine)
 
 
 def service() -> Concierge:

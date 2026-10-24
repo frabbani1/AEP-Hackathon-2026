@@ -57,6 +57,7 @@ post "CloudFront /api/risk"   200 "$CF/api/risk" "$b_tok"
 get  "CloudFront labor json"  200 "$CF/curated/labor_standards.json"
 get  "CloudFront calibration" 200 "$CF/serving/risk/calibration.json"
 get  "premise table private"  403 "$CF/serving/risk/premise_risk.jsonl"
+get  "restoration tree private" 403 "$CF/serving/risk/restoration_tree.json"
 get  "parquet tables private" 403 "$CF/curated/tables/premise_dim.parquet"
 get  "ETL reports private"    403 "$CF/_meta/etl_run_latest.json"
 [[ $fail == 0 ]] && echo "smoke OK" || { echo "smoke FAILED" >&2; exit 1; }

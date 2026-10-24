@@ -157,7 +157,11 @@ streamlit run app.py
 
 - Storm severity is simulated/calibrated, not live weather.
 - Labor and travel multipliers are representative averages.
-- Estimates are not confirmed utility restoration times.
+- Estimates are not confirmed utility restoration times. The restoration range (P50 to P90) comes from a seeded
+  simulation whose spreads (labor hours, crew presence) are stated assumptions, not values fitted to observed repairs;
+  the backtest spec checks how well they hold up.
+- The restoration model spreads damage evenly over the sections of a line (section length is not in the data), treats
+  crews as one pool working down a priority list, and starts the clock when crews start (no assessment delay).
 - Prototype scope: focused and explainable, not a production outage-management system.
 
 ## 13. Future Work

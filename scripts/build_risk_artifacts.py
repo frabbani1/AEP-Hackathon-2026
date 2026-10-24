@@ -4,6 +4,10 @@
     CONCIERGE_TOKEN_SALT=<secret> .venv/bin/python scripts/build_risk_artifacts.py [--sample]
 
 Writes artifacts/risk/premise_risk.jsonl and artifacts/risk/calibration.json.
+
+If the clean tables exist (run scripts/curate.py first, with the same salt), it also adds the line context and tree
+position (cn, n0, nl, nf, pc, pn, ap) to each scored row and writes artifacts/risk/restoration_tree.json, which the
+restoration engine needs. Pass --curated to point at a different tables folder.
 """
 from __future__ import annotations
 
@@ -23,6 +27,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-dir", type=Path, default=ROOT / "data")
     ap.add_argument("--out", type=Path, default=ROOT / "artifacts" / "risk")
+    ap.add_argument("--curated", type=Path, default=ROOT / "artifacts" / "curated",
+                    help="folder written by scripts/curate.py (needs tables/device_dim.parquet and premise_dim.parquet)")
     ap.add_argument("--allow-non-monotone", action="store_true",
                     help="record the override and continue if band hit rates are not ordered")
     ap.add_argument("--sample", action="store_true",
@@ -43,6 +49,14 @@ def main() -> int:
     for band, ev in cal["band_evidence"].items():
         print(f"  {band}: {ev['sentence'] if ev else 'no circuits'}")
     print("gate:", cal["backtest"]["gate"], " config_hash:", cal["config_hash"][:19])
+
+    tables = args.curated / "tables"
+    if (tables / "device_dim.parquet").exists() and (tables / "premise_dim.parquet").exists():
+        from concierge.curate.restoration_tree import enrich_risk_rows  # noqa: E402 (needs pyarrow)
+        print("restoration context:", enrich_risk_rows(tables, args.out))
+    else:
+        print(f"note: {tables} has no device_dim/premise_dim; rows have no line context or restoration tree "
+              "(run scripts/curate.py with the same salt first)")
 
     if args.sample:
         engine = RiskEngine.from_artifacts(args.out)
