@@ -35,7 +35,11 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `data/matched_upstream/matched_upstream.txt` | Premise -> upstream device chain (tab-separated) |
 | `backend/concierge/risk/` | Risk engine: loaders, storms, features, calibration, confidence, explanation, engine, build |
 | `backend/tests/risk/` | Unit, property (hypothesis), synthetic-fixture, integration, and real-data tests |
+| `backend/concierge/curate/` | Data curation: raw files -> clean Parquet/JSON tables (`artifacts/curated/`) |
+| `scripts/curate.py` | Runs the curation pipeline (about 5 s) |
 | `scripts/build_risk_artifacts.py` | Builds `artifacts/risk/` (gitignored) from `data/` |
+| `scripts/aws_publish.sh`, `scripts/load_dynamodb.py` | Upload to S3 / load DynamoDB. Dry run unless `APPLY=1` / `--apply` |
+| `docs/data-cleaning.md`, `docs/aws-setup.md` | Cleaning rules; step-by-step AWS setup |
 | `data/Install_Labor_HackOHIO.xlsx` | Labor hours per unit, access adders, indirect multiplier (4.5) |
 
 Never modify files under `data/`. Write derived outputs elsewhere (e.g. `artifacts/`).
@@ -44,11 +48,17 @@ Never modify files under `data/`. Write derived outputs elsewhere (e.g. `artifac
 
 - `.dbf` files are Git LFS objects. They are pulled in this checkout; on a fresh clone run `git lfs pull`.
 - ARCOS damage: 1,659 rows. `Event` is "Default" everywhere. Storms come from `Report_Tim` clusters:
-  2024-09-26..10-02 (~194 rows) and 2025-02-12..02-18 (1,254 rows). ~210 rows fall outside both storms.
+  2024-09-27..10-02 (193 rows) and 2025-02-12..02-18 (1,254 rows). 212 rows fall outside both storms.
 - ARCOS `Asset_Type`: primary 704, Pole 355, Fuse Bank 280, secondary 156, Transformer 74,
-  Recloser Bank 58, Switch 19, Capacitor Bank 6. No damage-type or quantity field.
-- Circuit keys: ARCOS `Circuit` = "CIR60", topology/customer = "0000060". Normalize both to int.
-  85 ARCOS circuits; 81 join the topology (CIR12 and blank/non-numeric values do not).
+  Recloser Bank 58, Switch 19, Capacitor Bank 6, Light 5, Step Transformer 1, blank 1.
+  `Inform_Wor` IS a damage-type field: Damaged Wire 861, Switch 357, Pole 355, Equipment 81, Light 5. No quantity field.
+- ARCOS repairs: `Repaired = No` on 76 rows carries a placeholder `Repaired_D`; treat duration as unknown, not 0.
+  Real repairs take 0-6 days, then a 12-25+ day backlog tail.
+- **Circuit keys: ARCOS labels are NOT circuit numbers.** `CIR2` is circuit 16, `CIR6` is 5, `CIR10` is 9. Always
+  translate with `load_crosswalk()` (device layers' `aep_circui` -> `circuit_id`; 1:1 across 117 labels). The numeric
+  `circuit_id` is the real key (matches customers 117,615/117,615). Use `normalize_circuit()` only on numeric ids.
+  Primary/secondary line layers use a different label scheme; never use their `aep_circui`.
+  1,645 of 1,659 ARCOS rows map to a topology circuit (`TINKER`, `PENN FOREST`, `SERVICE CENTER` do not).
 - Topology: 117,599 premises, 110 circuits. Each line is `premise<TAB>class*id*type*name...`, ending at
   `eo_circuit*...*Circuit Breaker*<circuit>`. Protective types: Fuse, Recloser (Hydraulic/Electronic),
   Sectionalizer. `Step` is a step transformer (not protective). Chain length 2 to 13.
@@ -67,8 +77,9 @@ Load only whitelisted columns from source files.
 ## Commands
 
 ```bash
-.venv/bin/python -m pip install -e '.[dev]'     # or: pip install pytest==9.1.1 hypothesis==6.170.9
-.venv/bin/python -m pytest                       # all tests, ~2 s (includes the real-data build)
+.venv/bin/python -m pip install -e '.[dev]'     # pinned deps from pyproject.toml; add .[aws] for boto3
+.venv/bin/python -m pytest                       # 146 tests, ~6 s (includes real-data builds)
+CONCIERGE_TOKEN_SALT=<secret> .venv/bin/python scripts/curate.py
 CONCIERGE_TOKEN_SALT=<secret> .venv/bin/python scripts/build_risk_artifacts.py --sample
 ```
 

@@ -11,11 +11,17 @@ Inputs (verified against the real files on 2026-10-24):
 | --- | --- | --- |
 | Damage records | `arcos_prod_damage_09_28_Clip.dbf` | `Circuit`, `Report_Tim` |
 | Premise -> circuit, service type | `Customer_Clip.dbf` | `premise_nu`, `circuit_id`, `kind_of_se` |
+| ARCOS label -> circuit id | Fuse, Transformer, Switch, Recloser layers | `circuit_id`, `aep_circui` |
 | Premise -> device chain | `matched_upstream.txt` | device class and type per hop |
 
 Observed facts that shape the design:
 - Storm windows (rule below): S1 = 2024-09-27..10-02 (193 records), S2 = 2025-02-12..02-18 (1,254).
-- 110 circuits, 4 to ~3,500 premises each. 81 of 85 ARCOS circuits join the topology.
+- 110 circuits, 4 to ~3,500 premises each.
+- **ARCOS labels are not circuit numbers.** `CIR2` is circuit 16, `CIR6` is 5, `CIR10` is 9. Translating by the digits in
+  the label sent 563 damage records (including the two busiest circuits) to the wrong circuit. The four device layers
+  give a 1:1 label-to-id map over 117 labels, validated against customers (117,615 of 117,615 rows agree on `circuit_id`)
+  and spatially (ARCOS points sit beside the right circuit's transformers 1,560 of 1,645 times with the crosswalk, 999
+  without). 1,645 of 1,659 ARCOS rows map to a topology circuit; `TINKER`, `PENN FOREST` and `SERVICE CENTER` do not.
 - Service type: Overhead 64,824, Underground 52,419, Unknown 399.
 - Chain: protective devices per premise 0-10 (mode 2); chain length 2-13 (mode 4).
 
@@ -101,7 +107,8 @@ from the detected windows and stored in `calibration.json`.
 3. Extend each group to adjacent days with >= 3 records.
 4. Keep groups with >= 100 records as storms; order by date (S1, S2).
 5. Records outside storm windows (~210, background damage) are excluded from `D_c` and counted in `missing_data`.
-6. Records whose `Circuit` has no digits, or whose circuit is not in the topology (CIR12), are excluded and counted.
+6. Each record's `Circuit` label is translated with the crosswalk (`load_crosswalk`). Records with a blank label, a label
+   the crosswalk does not know, or a circuit outside the topology are excluded and counted separately.
 The build asserts exactly two storms are found; otherwise it fails with the detected windows printed.
 
 ### D6. Backtest and band-evidence protocol
@@ -128,26 +135,33 @@ The live score uses both storms; the evidence table describes how well the same 
 That distinction is stated in assumptions.
 
 Real results from `scripts/build_risk_artifacts.py` (S1 -> S2, `k = 0`, tau = 2 per 1k, 104 circuits with at least
-50 premises). The backtest thresholds come from S1 circuit rates alone: `t_med = 0.0` (Low means no S1 damage) and
-`t_high = 3.35` reports/1k.
+50 premises, ARCOS labels translated through the crosswalk). The backtest thresholds come from S1 circuit rates alone:
+`t_med = 0.0` (Low means no S1 damage) and `t_high = 3.24` reports/1k.
 
 | Band | Circuits | Premises | Premise-weighted hit rate | Wilson 95% | S2 reports/1k |
 | --- | --- | --- | --- | --- | --- |
-| Low | 61 | 65,525 | 0.28 | 0.18-0.40 | 5.5 |
-| Medium | 26 | 35,193 | 0.64 | 0.45-0.80 | 11.8 |
-| High | 17 | 16,829 | 0.77 | 0.53-0.91 | 26.8 |
+| Low | 61 | 64,483 | 0.38 | 0.27-0.51 | 5.8 |
+| Medium | 25 | 35,924 | 0.71 | 0.51-0.85 | 12.0 |
+| High | 18 | 17,140 | 0.74 | 0.51-0.89 | 25.5 |
 
-Sensitivity (all monotone, stored in `calibration.json`):
+Sensitivity (stored in `calibration.json`):
 
 | Variant | Low | Medium | High |
 | --- | --- | --- | --- |
-| tau = 1 per 1k | 0.44 | 0.82 | 0.88 |
-| tau = 5 per 1k | 0.15 | 0.42 | 0.64 |
-| Reverse (calibrate Feb 2025, test Sep 2024), tau = 2 | 0.08 | 0.28 | 0.34 |
+| tau = 1 per 1k | 0.47 | 0.88 | 0.85 |
+| tau = 5 per 1k | 0.17 | 0.41 | 0.57 |
+| Reverse (calibrate Feb 2025, test Sep 2024), tau = 2 | 0.13 | 0.20 | 0.28 |
 
-The ranking holds in every variant and the intervals are wide. The reverse direction has much lower absolute hit
-rates because Sep 2024 was a small storm (193 reports vs 1,254), so few circuits reach 2 reports per 1,000 homes. The
-UI should show the forward table and may disclose that absolute hit rates depend on storm size.
+What this does and does not show:
+- Low is clearly separated from Medium and High in every variant.
+- **Medium and High are not distinguishable by hit rate.** Their intervals overlap heavily (0.51-0.85 vs 0.51-0.89), and
+  at tau = 1 Medium is slightly above High. High does separate on damage density (25.5 vs 12.0 reports per 1k), so
+  High means "more damage per home", not "more likely to be hit". The UI copy should say this.
+- The gate in D6 step 7 passes at tau = 2 only because High is marginally above Medium. Treat it as a weak guarantee.
+- The reverse direction has much lower absolute hit rates because Sep 2024 was a small storm (193 reports vs 1,254).
+
+These numbers replaced an earlier set (Low 0.28, Medium 0.64, High 0.77) that came from a build which mapped ARCOS
+labels by their digits. The bug is documented above; the tests now fail if a damage record lands on the wrong circuit.
 
 ### D7. Confidence protocol
 Using production `n_c` (records in both storm windows) and `N_c`:
@@ -164,13 +178,13 @@ Using production `n_c` (records in both storm windows) and `N_c`:
 | otherwise (`1-4` records, or `0` records on a circuit with `>= 500` premises) | Low |
 
 Then: `extrapolated` severity lowers one level (High -> Medium -> Low). `kind_of_se = Unknown` lowers one level and
-adds a missing-data note. Real build (117,646 premises): 17,715 High, 39,555 Medium, 57,782 Low confidence; 2,594 premises fall back
-(52 `circuit_too_small`, 47 `no_circuit`, 2,495 `no_history_small_circuit`). All constants live in `config.py`.
+adds a missing-data note. Real build (117,646 premises): 20,789 High, 40,694 Medium, 53,569 Low confidence; 2,594 premises fall back
+(52 `circuit_too_small`, 47 `no_circuit`, 2,495 `no_history_small_circuit`; thresholds on live scores: Low <= 1.56, Medium <= 7.61). All constants live in `config.py`.
 
 Notes on the fallback rows:
 - `no_circuit` covers premises that appear in the customer file but have no upstream chain in the topology.
-- `circuit_unmapped` is supported through an `unmapped_circuits` input. The current data needs none, because
-  ARCOS `CIR60` and topology `0000060` both normalize directly to 60.
+- `circuit_unmapped` means a topology circuit that no ARCOS label maps to, so its history is unknowable. The real data
+  has none (all 110 appear in the crosswalk); the rule is tested with a synthetic circuit that has no label.
 
 Fallback response: `status = insufficient_data`, `reason_code`, plain message ("We don't have enough storm history for
 your line to rate it. Prepare as if an outage is possible."), no band, no score.

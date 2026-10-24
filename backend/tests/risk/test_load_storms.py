@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from concierge.risk.load import (ForbiddenColumnError, load_arcos, load_customers, load_topology, normalize_circuit,
+from concierge.risk.load import (CrosswalkError, ForbiddenColumnError, load_arcos, load_crosswalk, load_customers, load_topology, normalize_circuit,
                                  normalize_service, parse_topology_line, read_dbf)
 from concierge.risk.storms import StormDetectionError, count_days, detect_storms, storm_index
 
@@ -27,11 +27,31 @@ def test_customer_loader_reads_only_three_columns(synth):
     assert set(rows[0]) == {"premise_nu", "circuit_id", "kind_of_se"}
 
 
-def test_arcos_loader(synth):
+def test_arcos_loader_returns_raw_labels_not_circuit_ids(synth):
     recs = load_arcos(synth.arcos_dbf)
-    assert any(c is None for _, c in recs)       # blank circuit key
-    assert any(c == 17 for _, c in recs)          # CIR17 -> 17
+    assert any(c is None for _, c in recs)       # blank label
+    assert any(c == "CIR18" for _, c in recs)     # label for circuit 17: kept as text, never parsed
     assert all(d is None or isinstance(d, date) for d, _ in recs)
+
+
+def test_device_loader_refuses_other_columns(synth):
+    with pytest.raises(ForbiddenColumnError):
+        list(read_dbf(synth.device_dbfs[0], {"circuit_id", "scada_cont"}, "gis_device"))
+
+
+def test_crosswalk_maps_label_to_circuit_id(synth):
+    cw = load_crosswalk(synth.device_dbfs)
+    assert cw["CIR18"] == 17 and cw["CIR12"] == 11          # shifted: label number != circuit id
+    assert "TINKER" not in cw
+
+
+def test_crosswalk_conflict_is_fatal(tmp_path):
+    from .fixtures import write_dbf
+    fields = [("circuit_id", "C", 32), ("aep_circui", "C", 64)]
+    write_dbf(tmp_path / "a.dbf", fields, [{"circuit_id": "0000005", "aep_circui": "CIR6"}])
+    write_dbf(tmp_path / "b.dbf", fields, [{"circuit_id": "0000006", "aep_circui": "CIR6"}])
+    with pytest.raises(CrosswalkError):
+        load_crosswalk([tmp_path / "a.dbf", tmp_path / "b.dbf"])
 
 
 # ---- 2.2 topology parser ---------------------------------------------------------------------------------

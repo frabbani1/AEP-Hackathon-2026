@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 import struct
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -15,6 +15,8 @@ from pathlib import Path
 ALLOWED_COLUMNS: dict[str, frozenset[str]] = {
     "customer": frozenset({"premise_nu", "circuit_id", "kind_of_se"}),
     "arcos": frozenset({"Circuit", "Report_Tim"}),
+    # Fuse/Transformer/Switch/Recloser layers: used only to translate ARCOS circuit labels to circuit ids.
+    "gis_device": frozenset({"circuit_id", "aep_circui"}),
 }
 
 PROTECTIVE_TYPES = frozenset(
@@ -73,7 +75,11 @@ def read_dbf(path: str | Path, columns: set[str] | frozenset[str], kind: str) ->
 
 
 def normalize_circuit(value: str | int | None) -> int | None:
-    """'CIR60' and '0000060' both become 60. Values without digits become None."""
+    """Extract the integer from a circuit_id such as '0000060' (-> 60). Values without digits become None.
+
+    Only use this for numeric circuit ids (customer and topology files, and the circuit_id column of the GIS
+    layers). Do NOT use it on ARCOS labels: 'CIR2' is circuit 16, not 2. See load_crosswalk().
+    """
     if value is None:
         return None
     if isinstance(value, int):
@@ -101,16 +107,48 @@ def load_customers(path: str | Path) -> dict[str, tuple[int | None, str]]:
     return out
 
 
-def load_arcos(path: str | Path) -> list[tuple[date | None, int | None]]:
-    """(report date, normalized circuit) per damage record. Unparseable values become None."""
-    out: list[tuple[date | None, int | None]] = []
+def load_arcos(path: str | Path) -> list[tuple[date | None, str | None]]:
+    """(report date, raw circuit label) per damage record. Labels like 'CIR60' are NOT circuit ids.
+
+    Use load_crosswalk() to translate a label into the numeric circuit id used by customers and topology.
+    Blank labels become None; unparseable dates become None.
+    """
+    out: list[tuple[date | None, str | None]] = []
     for r in read_dbf(path, ALLOWED_COLUMNS["arcos"], "arcos"):
         try:
             d = datetime.strptime(r["Report_Tim"], "%Y%m%d").date()
         except ValueError:
             d = None
-        out.append((d, normalize_circuit(r["Circuit"])))
+        out.append((d, r["Circuit"] or None))
     return out
+
+
+class CrosswalkError(ValueError):
+    """The device layers disagree about which circuit a label belongs to."""
+
+
+def load_crosswalk(device_dbfs: Iterable[str | Path]) -> dict[str, int]:
+    """Map ARCOS-style circuit labels (e.g. 'CIR2') to numeric circuit ids (e.g. 16).
+
+    The label is NOT the circuit number in the device layers: CIR2 is circuit 16, CIR6 is circuit 5, and so on.
+    Every device layer (fuse, transformer, switch, recloser) carries both fields; across all four they agree 1:1 on
+    the real data. Any disagreement raises, so a bad mapping can never be used silently.
+    """
+    label_to_ids: dict[str, set[int]] = {}
+    id_to_labels: dict[int, set[str]] = {}
+    for path in device_dbfs:
+        for r in read_dbf(path, ALLOWED_COLUMNS["gis_device"], "gis_device"):
+            cid, label = normalize_circuit(r["circuit_id"]), r["aep_circui"]
+            if cid is None or not label:
+                continue
+            label_to_ids.setdefault(label, set()).add(cid)
+            id_to_labels.setdefault(cid, set()).add(label)
+    bad = {k: v for k, v in label_to_ids.items() if len(v) > 1}
+    bad_rev = {k: v for k, v in id_to_labels.items() if len(v) > 1}
+    if bad or bad_rev:
+        raise CrosswalkError(f"circuit label crosswalk is not 1:1: labels={dict(list(bad.items())[:5])} "
+                             f"ids={dict(list(bad_rev.items())[:5])}")
+    return {label: next(iter(ids)) for label, ids in label_to_ids.items()}
 
 
 @dataclass(frozen=True)

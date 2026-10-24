@@ -20,7 +20,7 @@ def synth(tmp_path_factory):
 def built(synth, tmp_path_factory):
     out = tmp_path_factory.mktemp("artifacts")
     cal = build_artifacts(customer_dbf=synth.customer_dbf, arcos_dbf=synth.arcos_dbf,
-                          topology_txt=synth.topology_txt, out_dir=out, salt=SALT)
+                          topology_txt=synth.topology_txt, device_dbfs=synth.device_dbfs, out_dir=out, salt=SALT)
     return out, cal
 
 

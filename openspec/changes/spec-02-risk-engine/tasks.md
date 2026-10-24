@@ -8,7 +8,7 @@
 
 - [x] 2.1 Implement whitelisted loaders in `load.py`; test that `critical_c` and address columns are never returned
 - [x] 2.2 Implement topology parser returning `P_p` (Fuse, Recloser H/E, Sectionalizer) and `H_p` (chain length - 1); test on sample lines from `matched_upstream.txt`
-- [x] 2.3 Implement circuit key normalization (`CIR60` and `0000060` -> 60; no digits -> None), reusing spec-01's map if available
+- [x] 2.3 Implement circuit id normalization for numeric ids (`0000060` -> 60) and the ARCOS label crosswalk built from the device layers (`CIR2` -> 16); conflicting layers raise
 - [x] 2.4 Implement storm window detection (D5); test that the real data yields 2024-09-27..10-02 and 2025-02-12..02-18
 
 ## 3. Features and score
@@ -44,3 +44,4 @@
 - [x] 7.2 Integration test on real data: 2 storms found, 110 circuits, ~117.6k premises scored or fallen back, monotone backtest, no forbidden fields in artifacts
 - [x] 7.3 Record the real backtest table and confidence counts in `design.md` (replace the probe numbers); also report reverse and tau sensitivity
 - [x] 7.4 Demo check: score one premise per band, switch severity `typical` -> `feb-2025-like`, show band and factors change; score an unknown token and show fallback
+- [x] 7.5 Fix: ARCOS labels were being read by their digits. Add `load_crosswalk`, shifted-label test fixtures, and a test that damage lands on the right circuit
