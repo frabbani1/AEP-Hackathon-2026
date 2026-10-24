@@ -1,2 +1,8 @@
 # macOS
 .DS_Store
+
+# derived build outputs (may be large; regenerate with scripts/build_risk_artifacts.py)
+artifacts/
+__pycache__/
+.pytest_cache/
+.hypothesis/
