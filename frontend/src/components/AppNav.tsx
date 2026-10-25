@@ -1,5 +1,5 @@
-import type { MouseEvent, ReactNode } from "react";
-import type { RoutePath } from "../lib/useRoute";
+import type { ReactNode } from "react";
+import { internalLink, type RoutePath } from "../lib/useRoute";
 import { ChatIcon, MapIcon } from "./icons";
 import "./AppNav.css";
 
@@ -13,17 +13,8 @@ const ITEMS: ReadonlyArray<{ to: RoutePath; label: string; icon: ReactNode }> = 
   { to: "/map", label: "Outage map", icon: <MapIcon size={20} /> },
 ];
 
-/** Switches between the two pages of the app. Real links, so open-in-new-tab still works. */
+/** Switches between the two main pages of the app. Real links, so open-in-new-tab still works. */
 export function AppNav({ path, onNavigate }: Props) {
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>, to: RoutePath) => {
-    // Let the browser handle new-tab clicks and other modified clicks.
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-      return;
-    }
-    event.preventDefault();
-    onNavigate(to);
-  };
-
   return (
     <nav className="appnav" aria-label="Outage Concierge">
       <div className="container">
@@ -34,7 +25,7 @@ export function AppNav({ path, onNavigate }: Props) {
                 href={item.to}
                 className="appnav__link"
                 aria-current={path === item.to ? "page" : undefined}
-                onClick={(event) => handleClick(event, item.to)}
+                onClick={internalLink(onNavigate, item.to)}
               >
                 {item.icon}
                 {item.label}

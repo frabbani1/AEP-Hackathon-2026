@@ -1,15 +1,32 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 
 /**
- * Minimal client-side routing for two pages, so no router dependency is needed.
- * Uses the History API. The host must serve index.html for /map (a dev server
+ * Minimal client-side routing for a handful of pages, so no router dependency is needed.
+ * Uses the History API. The host must serve index.html for every route below (a dev server
  * does this by default; Amplify needs a 200 rewrite rule).
  */
 
-export type RoutePath = "/" | "/map";
+export type RoutePath = "/" | "/map" | "/safety" | "/about";
+
+const ROUTES: readonly RoutePath[] = ["/", "/map", "/safety", "/about"];
 
 function toRoute(pathname: string): RoutePath {
-  return pathname.replace(/\/+$/, "") === "/map" ? "/map" : "/";
+  const clean = pathname.replace(/\/+$/, "") || "/";
+  return ROUTES.find((route) => route === clean) ?? "/";
+}
+
+/**
+ * Click handler for an in-app link: navigates without a page load. Modified clicks (new tab, new window) are left to
+ * the browser, so the link still works like a link.
+ */
+export function internalLink(navigate: (to: RoutePath) => void, to: RoutePath) {
+  return (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    navigate(to);
+  };
 }
 
 export function useRoute() {

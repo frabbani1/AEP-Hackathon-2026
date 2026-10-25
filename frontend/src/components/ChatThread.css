@@ -189,6 +189,15 @@
   text-transform: uppercase;
 }
 
+.msg__list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+}
+
+.msg__list li + li {
+  margin-top: 0.25rem;
+}
+
 .msg__tag {
   padding: 1px 10px;
   font-size: 0.75rem;
@@ -196,6 +205,21 @@
   background-color: var(--aep-orange-tint);
   border: 1px solid var(--aep-orange);
   border-radius: 10rem;
+}
+
+/* A forecast-only prediction (no outage data): purple, dashed, and labeled in words. */
+.msg__body--forecast {
+  padding: 10px 14px;
+  background-color: var(--forecast-tint);
+  border: 2px dashed var(--forecast);
+  border-radius: 10px;
+}
+
+.msg__tag--forecast {
+  font-weight: 700;
+  color: var(--forecast-ink);
+  background-color: #fff;
+  border: 1px dashed var(--forecast);
 }
 
 .msg--notice {

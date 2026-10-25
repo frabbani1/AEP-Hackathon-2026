@@ -28,14 +28,13 @@ export function Card({
   );
 }
 
-export type TagKind = "model" | "confirmed" | "actions" | "rules" | "sample";
+export type TagKind = "model" | "confirmed" | "actions" | "rules";
 
 const TAG_TEXT: Record<TagKind, string> = {
   model: "Model estimate",
   confirmed: "Confirmed by utility",
   actions: "Your actions",
   rules: "Rule-based",
-  sample: "Sample data",
 };
 
 /** Says where a piece of information comes from, so facts, estimates and actions stay separate. */

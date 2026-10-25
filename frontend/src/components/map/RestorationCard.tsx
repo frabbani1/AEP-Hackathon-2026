@@ -1,7 +1,10 @@
-import type { AccessCondition, DamageKind, RestorationEstimate, Scenario } from "../../api";
+import type { DamageKind, RestorationEstimate, Scenario } from "../../api";
 import {
+  ACCESS_OPTIONS,
   CREWS_MAX,
   CREWS_MIN,
+  DAMAGE_COUNT_MAX,
+  DAMAGE_COUNT_MIN,
   DAMAGE_LABELS,
   DAMAGE_MAX,
   DAMAGE_ORDER,
@@ -60,23 +63,44 @@ const MOVER_LABEL = {
 
 /** "How long could restoration take?" A range, what moves it, and what-ifs a judge can change. */
 export function RestorationCard({ restoration, scenario, onScenarioChange, onReset }: Props) {
-  const damage = scenario.damage ?? restoration.assumedDamage;
   const isDefault =
     scenario.crews === DEFAULT_SCENARIO.crews &&
     scenario.access === DEFAULT_SCENARIO.access &&
-    scenario.upstreamDamage === DEFAULT_SCENARIO.upstreamDamage &&
+    scenario.damageCount === null &&
     scenario.damage === null;
 
-  const setDamage = (kind: DamageKind, value: number) => onScenarioChange({ damage: { ...damage, [kind]: value } });
+  // The total starts from what the model assumed for this area and storm.
+  const assumedCount = restoration.damageCount ?? DAMAGE_COUNT_MIN;
+  const chosenKinds = scenario.damage !== null;
 
+  // Choosing kinds of damage replaces the total. Taking every kind back to zero hands control back to the model.
+  const setDamage = (kind: DamageKind, value: number) => {
+    const next = { pole: 0, fuse: 0, primary: 0, transformer: 0, secondary: 0, ...scenario.damage, [kind]: value };
+    const any = DAMAGE_ORDER.some((k) => next[k] > 0);
+    onScenarioChange({ damage: any ? next : null });
+  };
   return (
     <Card id="restoration" title="How long could restoration take?" tag={<Tag kind="model" />}>
       <p className="card__lead">If an outage happens here, power could take</p>
       <p className="range__text">{restoration.rangeText}</p>
-      <RangeBar low={restoration.lowHours} high={restoration.highHours} />
+      <RangeBar low={restoration.p50Hours} high={restoration.p90Hours} />
+      <p className="card__muted">{restoration.meaning}</p>
       <p className="card__muted">
         Confidence: {restoration.confidence}. This is a model estimate, not a confirmed restoration time.
       </p>
+
+      {restoration.steps.length > 0 && (
+        <>
+          <h4 className="card__subhead">How power comes back</h4>
+          <ol className="plain">
+            {restoration.steps.map((step) => (
+              <li key={step.stage}>
+                {step.label}: likely by about {step.doneByHours} {step.doneByHours === 1 ? "hour" : "hours"}.
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
 
       <h4 className="card__subhead">What could move it</h4>
       <ul className="factors">
@@ -93,12 +117,13 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
         ))}
       </ul>
 
-      {restoration.sequencingNote && (
-        <p className="callout">
-          <InfoIcon size={20} />
-          <span>{restoration.sequencingNote}</span>
-        </p>
-      )}
+      <p className="callout">
+        <InfoIcon size={20} />
+        <span>
+          Power often comes back in steps. Repairs closer to the power source restore the most homes first, so some
+          homes get power before the end of the range.
+        </span>
+      </p>
 
       <fieldset className="whatif">
         <legend className="whatif__legend">Try a what-if</legend>
@@ -115,12 +140,7 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
 
         <fieldset className="choice">
           <legend className="choice__legend">Access to the damage</legend>
-          {(
-            [
-              ["normal", "Normal"],
-              ["limited", "Limited (blocked roads, hard-to-reach equipment)"],
-            ] as Array<[AccessCondition, string]>
-          ).map(([value, label]) => (
+          {ACCESS_OPTIONS.map(({ value, label }) => (
             <label key={value} className="choice__option">
               <input
                 type="radio"
@@ -134,31 +154,42 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
           ))}
         </fieldset>
 
-        <label className="choice__option choice__option--solo">
-          <input
-            type="checkbox"
-            checked={scenario.upstreamDamage}
-            onChange={(event) => onScenarioChange({ upstreamDamage: event.target.checked })}
-          />
-          <span>Assume damage upstream on the main line, so repairs here wait for it</span>
-        </label>
-
         <div className="whatif__damage">
-          <p className="choice__legend">Damage to assume</p>
+          <p className="choice__legend">Repairs to assume</p>
           <p className="field__hint">
-            {scenario.damage ? "Using your numbers." : "Starts from the model's assumption for this area."}
+            {chosenKinds
+              ? "Using the kinds of damage you chose below."
+              : scenario.damageCount !== null
+                ? "Using your number."
+                : "Starts from the model's assumption for this area and storm."}
           </p>
-          {DAMAGE_ORDER.map((kind) => (
+          {!chosenKinds && (
             <Stepper
-              key={kind}
-              label={DAMAGE_LABELS[kind]}
-              unit={DAMAGE_LABELS[kind].toLowerCase()}
-              value={damage[kind]}
-              min={0}
-              max={DAMAGE_MAX}
-              onChange={(value) => setDamage(kind, value)}
+              label="Repair jobs in total"
+              unit="repair jobs"
+              value={scenario.damageCount ?? assumedCount}
+              min={DAMAGE_COUNT_MIN}
+              max={DAMAGE_COUNT_MAX}
+              onChange={(damageCount) => onScenarioChange({ damageCount })}
             />
-          ))}
+          )}
+          <details className="whatif__kinds" open={chosenKinds}>
+            <summary>Or choose the kinds of damage</summary>
+            <p className="field__hint">
+              Only the damage you enter is counted, and it is placed on the line serving a typical home in this area.
+            </p>
+            {DAMAGE_ORDER.map((kind) => (
+              <Stepper
+                key={kind}
+                label={DAMAGE_LABELS[kind]}
+                unit={DAMAGE_LABELS[kind].toLowerCase()}
+                value={scenario.damage?.[kind] ?? 0}
+                min={0}
+                max={DAMAGE_MAX}
+                onChange={(value) => setDamage(kind, value)}
+              />
+            ))}
+          </details>
         </div>
 
         <button type="button" className="btn btn-outline-danger whatif__reset" onClick={onReset} disabled={isDefault}>

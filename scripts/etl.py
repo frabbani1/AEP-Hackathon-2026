@@ -39,6 +39,7 @@ from concierge.curate.network import MIN_GROUP  # noqa: E402
 from concierge.curate.pipeline import curate, sha256  # noqa: E402
 from concierge.curate.restoration_tree import TREE_FILE  # noqa: E402
 from concierge.curate.restoration_tree import enrich_risk_rows as enrich  # noqa: E402
+from concierge.curate.zones import ZONES_FILE, build_zones  # noqa: E402
 from concierge.risk.build import build_artifacts  # noqa: E402
 from concierge.risk.load import normalize_circuit  # noqa: E402
 from concierge.risk.tokens import SALT_ENV  # noqa: E402
@@ -176,7 +177,7 @@ def sanitize(run_dir: Path) -> dict:
     if (src / "drawings").exists():
         shutil.copytree(src / "drawings", clean / "curated/drawings")
     (clean / "serving/risk").mkdir(parents=True)
-    for f in ("premise_risk.jsonl", "calibration.json", TREE_FILE):
+    for f in ("premise_risk.jsonl", "calibration.json", TREE_FILE, ZONES_FILE):
         shutil.copy2(run_dir / "risk" / f, clean / "serving/risk" / f)
     report["rows"]["premise_risk"] = sum(1 for _ in open(clean / "serving/risk/premise_risk.jsonl"))
     # internal/ (crosswalk, quality report) is deliberately NOT copied: it stays in the raw bucket's staging/.
@@ -275,6 +276,7 @@ def main() -> int:
         out_dir=run_dir / "risk", salt=salt)
     log(f"risk: {calibration['counts']['premises']} premises, gate={calibration['backtest']['gate']}")
     log(f"enrich: {enrich_risk_rows(run_dir)}")
+    log(f"zones: {build_zones(run_dir / 'curated/tables', run_dir / 'risk', salt)}")
 
     if not args.no_upload:
         stage(raw_bucket, run_dir, run_id)

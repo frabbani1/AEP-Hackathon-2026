@@ -73,6 +73,8 @@ export class ConciergeStack extends cdk.Stack {
         ENROLL_TABLE: alertsTable.tableName,
         CLEAN_BUCKET: cleanBucket.bucketName,
         BEDROCK_MODEL_ID: props.bedrockModelId,
+        // Weather comes from Open-Meteo over the public internet (the Lambda is not in a VPC). "0" turns it off.
+        WEATHER_ENABLED: "1",
         POWERTOOLS_LOG_LEVEL: "INFO",
       },
     });
@@ -93,7 +95,7 @@ export class ConciergeStack extends cdk.Stack {
     for (const prefix of ["", "/api"]) {
       api.addRoutes({ path: `${prefix}/health`, methods: [apigw.HttpMethod.GET], integration });
       for (const route of ["risk", "restoration", "guidance", "alerts", "messages", "summary", "assistant",
-        "alerts/enroll", "alerts/unenroll", "alerts/simulate"]) {
+        "alerts/enroll", "alerts/unenroll", "alerts/simulate", "zones", "zones/find", "zones/assess", "weather", "outlook"]) {
         api.addRoutes({ path: `${prefix}/${route}`, methods: [apigw.HttpMethod.POST], integration });
       }
       api.addRoutes({ path: `${prefix}/alerts/audit`, methods: [apigw.HttpMethod.GET], integration });
@@ -105,7 +107,7 @@ export class ConciergeStack extends cdk.Stack {
     const stage = api.defaultStage!.node.defaultChild as apigw.CfnStage;
     stage.defaultRouteSettings = { throttlingBurstLimit: 100, throttlingRateLimit: 50 };
 
-    // ---- web hosting (frontend comes later) ---------------------------------------------------------------
+    // ---- web hosting (publish the built frontend with `make publish-web`) ---------------------------------------------------------------
     const webBucket = new s3.Bucket(this, "WebBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -124,6 +126,16 @@ export class ConciergeStack extends cdk.Stack {
       compress: true,
     };
 
+    // The app routes in the browser (/map). A hard reload or shared link to /map has no file in S3, so serve
+    // index.html for paths without a file extension. Attached to the site behavior only, so the API's own 4xx
+    // answers and the "private" 403s on the static paths are untouched.
+    const spaRewrite = new cloudfront.Function(this, "SpaRewrite", {
+      comment: "Serve index.html for client-side routes",
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+      code: cloudfront.FunctionCode.fromInline(
+        "function handler(event) { var r = event.request; if (r.uri.indexOf('.') === -1) { r.uri = '/index.html'; } return r; }",
+      ),
+    });
     const distribution = new cloudfront.Distribution(this, "Cdn", {
       comment: "AEP Outage Concierge",
       defaultRootObject: "index.html",
@@ -134,6 +146,7 @@ export class ConciergeStack extends cdk.Stack {
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
         compress: true,
+        functionAssociations: [{ function: spaRewrite, eventType: cloudfront.FunctionEventType.VIEWER_REQUEST }],
       },
       additionalBehaviors: {
         "/api/*": {

@@ -11,8 +11,11 @@ restoration take? What should I do? Do I qualify for alerts? Challenge text: `do
 Status: `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, the labor-mapping
 review, is open), `spec-02-risk-engine` and `spec-03-restoration-engine` (7.4, removing the one-release `low/typical/high_hours`
 shim, waits for spec-05 and spec-06) are implemented. The frontend has two pages (chat home at `/`, outage
-map at `/map`, see `frontend/`) running on a mock client. The map page shows clearly labeled sample data
-(`frontend/src/api/sample/`), not engine output.
+map at `/map`, see `frontend/`). The map page runs on the real API (`POST /zones`, `POST /zones/assess`, `GET /evidence`,
+through `src/api/httpClient.ts`). The chat also uses the real API: a typed city or ZIP goes to `POST /zones/find`
+(`backend/concierge/zones/places.py`, public place and ZIP tables for the Roanoke Valley only), and the answers come from
+`POST /zones/assess`. Areas are named for nearby places ("Salem"), not "Area 7"; `scripts/relabel_zones.py` renames an older `zones.json`.
+Anything outside that territory (an Ohio ZIP, say) answers "not covered". Only the chat page's storm summary is still a sample.
 Spec-05 (alerts) and spec-06 (assistant) are implemented; open items are listed in their `tasks.md` (team reviews, deploy-time checks).
 The two backends do not talk to each other yet (see "Circuit keys" and `pipeline/README.md`). Work is driven by
 OpenSpec changes in `openspec/changes/`.
@@ -46,9 +49,12 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `backend/tests/risk/` | Unit, property (hypothesis), synthetic-fixture, integration, and real-data tests |
 | `backend/concierge/restoration/` | Restoration engine v2: `config` (assumptions), `jobs` (pricing, plan), `tree` (runtime tree), `schedule` (step restoration), `montecarlo` (seeded P50/P90), `model` (contract, `RESTORATION_ENGINE` switch), `v1` (frozen first version). Tree builder: `backend/concierge/curate/restoration_tree.py`. Rules in `docs/restoration-tree.md` |
 | `backend/concierge/assistant/` | Spec-06 assistant: `factcard` (card, digit-free projection, sanitizer), `guard` (output rules), `compose` (orchestration), `phrase` (Bedrock Converse, breaker), `cache`, `safety` (hard-coded safety text), `fallbacks`, `prompts/` (8 versioned prompts). Route `POST /assistant`. Tests in `backend/tests/assistant/` |
+| `backend/concierge/weather/` | Open-Meteo client (`openmeteo`, stdlib only), weather block (`summary`), gust-to-severity scale (`severity`, `anchors.json` from `scripts/calibrate_weather.py`). Used by `severity: "weather"` and `POST /weather`. Never reaches the model. Tests in `backend/tests/weather/` |
 | `backend/tests/restoration/` | Golden v1 tests, tree/jobs/scheduler/Monte Carlo/model/service tests, real-data checks (skipped without `artifacts/`) |
 | `scripts/profile_restoration.py` | Latency and scenario-table report for the restoration engine on the real artifacts |
-| `frontend/` | React + TS + Vite, styled after aepohio.com. Pages: chat home and outage map (Leaflet). `src/api/types.ts` is the API contract; `src/api/mockClient.ts` is the stub to replace; `src/api/sample/` is placeholder map data to delete. `VITE_BASEMAP_URL` (empty = no tiles) sets the map background. `npm run dev` / `npm run build` |
+| `frontend/` | React + TS + Vite, styled after aepohio.com. Pages: chat home and outage map (Leaflet). `src/api/types.ts` is the UI contract; `src/api/httpClient.ts` calls the API (snake_case to camelCase); `src/api/mockClient.ts` is the storm-summary stub. Every link stays inside the app (no outside sites); pages are `/`, `/map`, `/safety`, `/about`. `VITE_API_URL` (default same-origin `/api`), `VITE_API_PROXY` (dev proxy target, default `http://127.0.0.1:8787`), `VITE_ASSISTANT_LLM=true` (ask Bedrock to phrase map text), `VITE_BASEMAP_URL` (empty = no tiles). `npm run dev` / `npm run build` |
+| `backend/concierge/zones/`, `backend/concierge/curate/zones.py` | Outage map zones. Builder (`curate/zones.py`, build time): H3 res-6 cells with 10+ premises, each rated through its median-risk premise, written to `artifacts/risk/zones.json` (server side only, holds tokens). Runtime: `zones/index.py` (load and validate), `zones/view.py` (engine output to the map's shapes). Routes `POST /zones`, `POST /zones/assess` in `api/service.py` |
+| `scripts/dev_api.py` | Serves the Lambda handler on `127.0.0.1:8787` from `artifacts/` (no AWS, no auth, one request at a time) for frontend development |
 | `backend/concierge/curate/` | Data curation: raw files -> clean Parquet/JSON tables (`artifacts/curated/`) |
 | `scripts/curate.py` | Runs the curation pipeline (about 5 s) |
 | `scripts/build_risk_artifacts.py` | Builds `artifacts/risk/` (gitignored) from `data/` |
@@ -101,6 +107,8 @@ Load only whitelisted columns from source files.
 CONCIERGE_TOKEN_SALT=<secret> <py> scripts/curate.py --no-drawings            # artifacts/curated (same salt as the next line)
 CONCIERGE_TOKEN_SALT=<secret> <py> scripts/build_risk_artifacts.py --sample   # artifacts/risk, incl. restoration_tree.json and pc/pn on rows
 <py> scripts/profile_restoration.py [--cases --severity typical]              # restoration latency / scenario table
+<py> scripts/dev_api.py                                                       # local API on :8787 from artifacts/ (build_risk_artifacts.py also writes zones.json)
+# then, in frontend/: npm run dev   (the Vite server proxies /api to the local API)
 
 # Data pipeline (Python 3.12 venv at pipeline/.venv; setup in pipeline/README.md)
 AEP_TOKEN_KEY=<secret, 16+ chars> pipeline/.venv/bin/python -m aep_pipeline run --raw data --out curated

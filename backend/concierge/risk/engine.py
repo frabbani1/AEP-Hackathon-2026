@@ -47,6 +47,10 @@ class RiskEngine:
         return cls(rows, calibration)
 
     # ---- severity -------------------------------------------------------------------------------------------
+    @property
+    def presets(self) -> dict[str, float]:
+        return dict(self._presets)
+
     def resolve_severity(self, severity: str | float | int) -> dict:
         if isinstance(severity, bool):
             raise SeverityError("severity must be a preset name or a number")

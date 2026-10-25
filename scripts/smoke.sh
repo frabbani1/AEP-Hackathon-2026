@@ -41,6 +41,12 @@ b_tok=$(printf '{"token":"%s"}' "$TOK")
 b_crews=$(printf '{"token":"%s","crews":6}' "$TOK")
 b_msg=$(printf '{"token":"%s","message_type":"outage_confirmed"}' "$TOK")
 b_extra=$(printf '{"token":"%s","address":"x"}' "$TOK")
+# One map area id, from the API itself. Empty (and the zone checks fail) when serving/risk/zones.json is not published.
+ZID=$(curl -s -m 60 -X POST -H 'content-type: application/json' "$API/zones" -d '{}' | python3 -c 'import json,sys;print(json.load(sys.stdin)["zones"][0]["id"])' 2>/dev/null || true)
+b_zone_wx=$(printf '{"zone_id":"%s","severity":"weather"}' "$ZID")
+b_zone_old=$(printf '{"zone_id":"%s","severity":"weather","as_of":"2025-02-16"}' "$ZID")
+b_zone_bad=$(printf '{"zone_id":"%s","severity":"weather","as_of":"2999-01-01"}' "$ZID")
+b_weather=$(printf '{"zone_id":"%s"}' "$ZID")
 
 get  "GET /health"            200 "$API/health"
 post "POST /risk"             200 "$API/risk" "$b_tok"
@@ -49,6 +55,14 @@ post "POST /guidance"         200 "$API/guidance" "$b_tok"
 post "POST /alerts"           200 "$API/alerts" "$b_tok"
 post "POST /messages"         200 "$API/messages" "$b_msg"
 post "POST /summary"          200 "$API/summary" "$b_tok"
+post "POST /zones"            200 "$API/zones" '{}'
+post "unknown zone rejected"  400 "$API/zones/assess" '{"zone_id":"z_aaaaaaaaaaaa"}'
+post "POST /zones weather"    200 "$API/zones" '{"severity":"weather"}'
+post "POST /zones/assess"     200 "$API/zones/assess" "$b_zone_wx"
+post "assess with past day"   200 "$API/zones/assess" "$b_zone_old"
+post "POST /weather"          200 "$API/weather" "$b_weather"
+post "future as_of rejected"  400 "$API/zones/assess" "$b_zone_bad"
+post "token route not weather" 400 "$API/risk" '{"token":"p_0123456789abcdef","severity":"weather"}'
 post "bad token rejected"     400 "$API/risk" '{"token":"nope"}'
 post "unknown field rejected" 400 "$API/risk" "$b_extra"
 post "invalid JSON rejected"  400 "$API/risk" '{bad'
@@ -58,6 +72,7 @@ get  "CloudFront labor json"  200 "$CF/curated/labor_standards.json"
 get  "CloudFront calibration" 200 "$CF/serving/risk/calibration.json"
 get  "premise table private"  403 "$CF/serving/risk/premise_risk.jsonl"
 get  "restoration tree private" 403 "$CF/serving/risk/restoration_tree.json"
+get  "map zones private"     403 "$CF/serving/risk/zones.json"
 get  "parquet tables private" 403 "$CF/curated/tables/premise_dim.parquet"
 get  "ETL reports private"    403 "$CF/_meta/etl_run_latest.json"
 [[ $fail == 0 ]] && echo "smoke OK" || { echo "smoke FAILED" >&2; exit 1; }

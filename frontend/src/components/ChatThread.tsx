@@ -23,8 +23,27 @@ interface Props {
   onPrompt: (question: string) => void;
 }
 
+/**
+ * Blocks are separated by a blank line. In a block, lines that start with "- " become a list, and any other lines
+ * before them become the lead-in text. Text is always rendered as text, never as markup.
+ */
 function Paragraphs({ text }: { text: string }) {
-  return text.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>);
+  return text.split("\n\n").map((block, index) => {
+    const lines = block.split("\n");
+    const items = lines.filter((line) => line.startsWith("- "));
+    if (items.length === 0) return <p key={index}>{block}</p>;
+    const lead = lines.filter((line) => !line.startsWith("- ")).join(" ");
+    return (
+      <div key={index}>
+        {lead && <p>{lead}</p>}
+        <ul className="msg__list">
+          {items.map((item) => (
+            <li key={item}>{item.slice(2)}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  });
 }
 
 function Message({ message }: { message: ChatMessage }) {
@@ -52,11 +71,16 @@ function Message({ message }: { message: ChatMessage }) {
       <span className="msg__avatar" aria-hidden="true">
         <BoltIcon size={18} />
       </span>
-      <div className={message.isError ? "msg__body msg__body--error" : "msg__body"}>
+      <div
+        className={
+          message.isError ? "msg__body msg__body--error" : message.isForecast ? "msg__body msg__body--forecast" : "msg__body"
+        }
+      >
         <p className="msg__author">
           <span className="sr-only">Outage Concierge said: </span>
           <span aria-hidden="true">Outage Concierge</span>
-          {message.isPreview && <span className="msg__tag">Preview &middot; not live data</span>}
+          {message.isEstimate && <span className="msg__tag">Model estimate &middot; not confirmed</span>}
+          {message.isForecast && <span className="msg__tag msg__tag--forecast">Prediction only &middot; no outage data</span>}
         </p>
         <Paragraphs text={message.content} />
       </div>
@@ -77,8 +101,8 @@ export function ChatThread({ messages, pending, onPrompt }: Props) {
         {!hasMessages && (
           <div className="welcome">
             <p className="welcome__lede">
-              Get clear answers before, during, and after a storm. Set your location, then ask a
-              question or pick one below.
+              Get clear answers before, during, and after a storm. Tell me your city or ZIP code
+              (here or in the location box), then ask a question or pick one below.
             </p>
             <ul className="prompts">
               {PROMPTS.map((prompt) => (

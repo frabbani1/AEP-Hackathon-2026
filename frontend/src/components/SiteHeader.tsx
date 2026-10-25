@@ -1,24 +1,20 @@
 import { useEffect, useRef, useState } from "react";
+import { internalLink, type RoutePath } from "../lib/useRoute";
 import { CloseIcon, MenuIcon, WarningIcon } from "./icons";
 import "./chrome.css";
 
-const SITE = "https://www.aepohio.com";
-
-const NAV = [
-  { label: "My Account", href: `${SITE}/account/` },
-  { label: "Outages", href: `${SITE}/outages/` },
-  { label: "Savings", href: `${SITE}/savings/` },
-  { label: "Community", href: `${SITE}/community/` },
-  { label: "Contact", href: `${SITE}/contact` },
+/** Every link stays inside this app. Nothing here leaves for an outside site. */
+const NAV: ReadonlyArray<{ label: string; to: RoutePath }> = [
+  { label: "Safety", to: "/safety" },
+  { label: "About", to: "/about" },
 ];
 
-const externalProps = { target: "_blank", rel: "noopener noreferrer" } as const;
-
-function NewTabNote() {
-  return <span className="sr-only"> (opens in a new tab)</span>;
+interface Props {
+  path: RoutePath;
+  onNavigate: (to: RoutePath) => void;
 }
 
-export function SiteHeader() {
+export function SiteHeader({ path, onNavigate }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
 
@@ -35,6 +31,23 @@ export function SiteHeader() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
 
+  const go = (to: RoutePath) => {
+    setMenuOpen(false);
+    onNavigate(to);
+  };
+
+  const links = (
+    <>
+      {NAV.map((item) => (
+        <li key={item.to}>
+          <a href={item.to} aria-current={path === item.to ? "page" : undefined} onClick={internalLink(go, item.to)}>
+            {item.label}
+          </a>
+        </li>
+      ))}
+    </>
+  );
+
   return (
     <header>
       <div className="utility-bar">
@@ -50,28 +63,13 @@ export function SiteHeader() {
 
       <div className="site-header">
         <div className="container site-header__inner">
-          <a className="site-header__brand" href={SITE} {...externalProps}>
-            <img src="/ohio-power-logo.svg" alt="Ohio Power Company home" />
-            <NewTabNote />
+          <a className="site-header__brand" href="/" onClick={internalLink(go, "/")}>
+            <img src="/ohio-power-logo.svg" alt="Outage Concierge home" />
           </a>
 
-          <nav className="site-nav" aria-label="Ohio Power Company">
-            <ul className="site-nav__list">
-              {NAV.map((item) => (
-                <li key={item.label}>
-                  <a href={item.href} {...externalProps}>
-                    {item.label}
-                    <NewTabNote />
-                  </a>
-                </li>
-              ))}
-            </ul>
+          <nav className="site-nav" aria-label="More information">
+            <ul className="site-nav__list">{links}</ul>
           </nav>
-
-          <a className="btn btn-danger site-header__login" href={`${SITE}/account/`} {...externalProps}>
-            Log in
-            <NewTabNote />
-          </a>
 
           <button
             ref={toggleRef}
@@ -86,23 +84,9 @@ export function SiteHeader() {
           </button>
         </div>
 
-        <nav
-          id="mobile-nav"
-          className="mobile-nav"
-          aria-label="Ohio Power Company mobile"
-          hidden={!menuOpen}
-        >
+        <nav id="mobile-nav" className="mobile-nav" aria-label="More information, mobile" hidden={!menuOpen}>
           <div className="container">
-            <ul className="mobile-nav__list">
-              {NAV.map((item) => (
-                <li key={item.label}>
-                  <a href={item.href} {...externalProps}>
-                    {item.label}
-                    <NewTabNote />
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <ul className="mobile-nav__list">{links}</ul>
           </div>
         </nav>
       </div>

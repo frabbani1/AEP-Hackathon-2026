@@ -45,6 +45,12 @@
   --zone-outline: #ffffff;
   --zone-selected: #012c4a;
 
+  /* Forecast-only outlook: a prediction with NO outage data behind it. Purple is used for nothing else in the app, so
+     it never reads as a risk band (blue, orange, red) or as confirmed information (gray). */
+  --forecast: #6b2fa0;
+  --forecast-ink: #2e1050;
+  --forecast-tint: #f1e9f9;
+
   /* Focus (form-control focus state on aepohio.com) */
   --aep-focus-border: #5fcfff;
   --aep-focus-ring: 0 0 0 0.2rem rgba(0, 156, 222, 0.25);

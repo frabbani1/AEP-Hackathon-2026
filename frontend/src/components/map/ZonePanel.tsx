@@ -8,6 +8,7 @@ import { PrepareCard } from "./PrepareCard";
 import { RestorationCard } from "./RestorationCard";
 import { RiskCard } from "./RiskCard";
 import { TransparencyCard } from "./TransparencyCard";
+import { WeatherCard } from "./WeatherCard";
 
 interface Props {
   state: AssessmentState;
@@ -97,7 +98,6 @@ export function ZonePanel({
 
       <div className="zone-panel__head">
         <h2 className="zone-panel__title">{data.zoneName}</h2>
-        {data.source === "sample" && <Tag kind="sample" />}
         {refreshing && (
           <span className="zone-panel__updating" aria-hidden="true">
             Updating&hellip;
@@ -137,6 +137,8 @@ export function ZonePanel({
           </a>
         </section>
       )}
+
+      {data.weather && <WeatherCard weather={data.weather} />}
 
       {data.risk && <RiskCard risk={data.risk} severity={data.severity} />}
 

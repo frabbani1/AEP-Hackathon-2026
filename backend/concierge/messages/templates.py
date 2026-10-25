@@ -23,6 +23,7 @@ BAND_WORDS = {"High": "higher", "Medium": "moderate", "Low": "lower"}
 SCENARIO_WORDS = {"sep-2024-like": "a milder storm like September 2024", "typical": "a typical storm",
                   "feb-2025-like": "a stronger storm like February 2025",
                   "beyond-observed": "a storm stronger than any we have seen",
+                  "weather": "a storm of the strength the weather in your area points to",
                   "custom": "the storm strength you chose"}
 
 _DEMO_PREPARE = {
