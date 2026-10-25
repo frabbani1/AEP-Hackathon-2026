@@ -245,3 +245,47 @@ backend/concierge/messages/compose.py              thin wrapper kept for /messag
 - Which model ID will the demo use? `BEDROCK_MODEL_ID` currently selects it; prompts are model-agnostic but acceptance rates may differ.
 - Should a shared cache (DynamoDB) be added, or is an in-memory cache enough for a hackathon demo?
 - Is there a verified utility outage number the team can show? If not, the generic sentence stays.
+
+## Implementation notes (2026-10-24)
+
+Where the build differs from the text above, or adds to it:
+
+- **Short downed-line sentence in messages.** D6 lists `downed_lines` for pre-storm and outage-confirmed messages. The existing line
+  (`messages/templates.SAFETY_LINE`, 58 characters) is kept for messages because push is limited to 200 characters and task 8.1 needs
+  the old and new fallback text to match. It is the constant `downed_lines_short` in `assistant/safety.py`. The longer
+  `downed_lines` text is used for the three item kinds and the explanation does not carry it.
+- **Scenario words.** `messages/templates.SCENARIO_WORDS` names "September 2024" and "February 2025", which are digits. The model gets
+  `SCENARIO_PROMPT_WORDS` ("a milder past storm", "a stronger past storm"). Code-built fallbacks keep the old words.
+- **Factor sentences.** The digit-free sentences for the overhead and underground service factors say "trees and falling branches"
+  instead of "wind and trees", because the weather rule rejects the word "wind" and a model that copied the sentence would be refused.
+- **Allow-list for what the model sees.** Besides the sanitizer, `to_prompt()` builds every field from a closed enum or a fixed
+  sentence. Assumptions, missing data and could-change items pass only if they are one of the risk engine's own fixed sentences
+  (`RISK_SENTENCES`) or one of the swapped digit-bearing ones. A test checks the engine against that set, so a new engine sentence fails
+  the test instead of silently disappearing from the model's view.
+- **Restoration assumptions.** The restoration engine's assumption list states crew hours and spreads. The card carries two fixed
+  digit-free sentences instead.
+- **Item kinds.** `text` in the response is the introduction. The items are in `sections.customer_actions`, safety first.
+  `actions_during` carries `downed_lines`, `generator_co`, `emergency` and `report_outage`.
+- **Token pattern.** `risk/tokens.TOKEN_RE` ended in `$`, which accepts a trailing newline (`"p_0123456789abcdef\n"`). It now ends in `\Z`.
+  This was found by the assistant's injection tests and affects every route that validates a token.
+- **Identifier scan.** `prompt_hash` and `cache.key` are SHA-256 values that can contain six digits in a row, so they are exempt
+  from the scan like `config_hash`. Nothing else changed in the scan.
+- **Model client.** `api/handler.py` builds the Bedrock client with an 8 s read timeout, a 3 s connect timeout and one SDK attempt, because the
+  assistant makes its own single retry. `/messages` shares the client, so it gets the same timeouts.
+- **Open question on rephrasing.** The code follows the proposal: the model may rephrase code-selected items. It cannot add, drop or reorder them,
+  and need-specific items are never sent. If the team says no, set the three item kinds to fixed text and keep only the introduction.
+
+## Real-model check (task 8.2)
+
+Run on 2026-10-24 with Amazon Nova 2 Lite (`us.amazon.nova-2-lite-v1:0`, us-east-2), cache off, 14 premises from artifacts built from `data/`
+with a throwaway salt (4 each of Low, Medium and High, 2 that cannot be rated) x 8 kinds = 112 calls, default scenario, sms channel.
+
+| Run | Accepted | Notes |
+| --- | --- | --- |
+| First prompts | 95 of 112 (85%) | All four message kinds accepted every time. The explanation was accepted 3 of 14: 11 drafts too long, 8 with sentences over the limit, 1 with a spelled-out number. Item kinds: 6 drafts with long sentences. |
+| After prompt tuning (shorter explanation, "under about fifteen words" for sentences and items) | 109 of 112 (97%) | Remaining rejections: 2 `actions_during` drafts with a weather word, 1 pre-storm draft that did not call the time an estimate. |
+
+The guard was not changed. One bug surfaced here and was fixed in code, not prompts: the explanation fallback failed the wording check
+for real premises because a fixed factor sentence said "wind" (see above). Latency per call on a laptop: p50 0.7 to 0.9 s, p95 1.5 to 1.9 s, max 3.4 s.
+The model often wraps its JSON in a code fence; the parser removes one surrounding fence and nothing else.
+Not measured: the burst test against the deployed API (task 8.3), and acceptance on other models.

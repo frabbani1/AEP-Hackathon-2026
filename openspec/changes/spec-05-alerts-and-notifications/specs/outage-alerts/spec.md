@@ -108,7 +108,7 @@ suggestions. Unknown channels SHALL be rejected with a 400.
 ### Requirement: Escalation triggers
 The engine SHALL return escalation recommendations from the table: customer care follow-up when `p50_hours >= 24`,
 priority outreach for a declared medical-equipment need with `p50_hours >= 4` or an Unrated premise, community resource
-information when `p90_hours >= 72`, human review when `p90_hours / p50_hours > 3`, and resource outreach for any declared need
+information when `p90_hours >= 72`, human review when `p90_hours / p50_hours > 4` and `p90_hours - p50_hours >= 24`, and resource outreach for any declared need
 when `p50_hours >= 24`. Each item SHALL be worded as a recommendation for a person and MUST NOT trigger any automatic action.
 
 #### Scenario: Long outage with a medical need
@@ -116,8 +116,12 @@ when `p50_hours >= 24`. Each item SHALL be worded as a recommendation for a pers
 - **THEN** escalation includes E1 and E2 and each has `action` and a plain `reason`
 
 #### Scenario: Wide range needs review
-- **WHEN** `p50_hours = 4` and `p90_hours = 14`
+- **WHEN** `p50_hours = 3` and `p90_hours = 30`
 - **THEN** escalation includes E4
+
+#### Scenario: A range that is wide only by rounding is not escalated
+- **WHEN** `p50_hours = 2` and `p90_hours = 9`, or `p50_hours = 4` and `p90_hours = 14`
+- **THEN** escalation does not include E4, because E4 needs both a P90/P50 ratio above 4 and a gap of at least 24 hours
 
 #### Scenario: Escalation is advisory
 - **WHEN** an escalation is returned

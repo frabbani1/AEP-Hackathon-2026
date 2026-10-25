@@ -32,8 +32,9 @@ RESULT_SCHEMA: dict[str, Any] = {
     "fallback": {"reason_code": None, "message": None},
 }
 
-# Free-text values must never carry identifiers. Token and hash are exempt (they are opaque by design).
-_EXEMPT_KEYS = {"premise_token", "config_hash", "token", "rules_table_hash"}
+# Free-text values must never carry identifiers. Token and hash are exempt (they are opaque by design); `prompt_hash` is the hash of a
+# prompt file, and `cache.key` is the assistant's cache key (a SHA-256 of the wording fields).
+_EXEMPT_KEYS = {"premise_token", "config_hash", "token", "rules_table_hash", "prompt_hash"}
 _IDENTIFIER = re.compile(r"CIR\d+|STATION|SUBSTATION|\d{6,}", re.IGNORECASE)
 
 
@@ -71,7 +72,7 @@ def _scan_strings(value: Any, path: str, exempt: bool = False) -> None:
             raise WhitelistError(f"{path}: text looks like it contains an identifier")
     elif isinstance(value, dict):
         for k, v in value.items():
-            _scan_strings(v, f"{path}.{k}", exempt or k in _EXEMPT_KEYS)
+            _scan_strings(v, f"{path}.{k}", exempt or k in _EXEMPT_KEYS or (k == "key" and path.endswith(".cache")))
     elif isinstance(value, list):
         for i, v in enumerate(value):
             _scan_strings(v, f"{path}[{i}]", exempt)

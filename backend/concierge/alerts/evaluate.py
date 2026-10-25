@@ -184,7 +184,10 @@ def decide(table: RulesTable, *, band: str | None, unrated: bool, p50_hours: int
         add("E2")
     if p90_hours is not None and p90_hours >= er["E3"]["min_p90_hours"]:
         add("E3")
-    if p50_hours and p90_hours and p90_hours / p50_hours > er["E4"]["min_p90_over_p50_ratio"]:
+    # E4 needs a wide range in relative terms (ratio) AND in absolute terms (gap in hours). The gap keeps a 2-to-9 hour
+    # range, wide only because of rounding, from being sent to a person (design.md, "E4 check against restoration-v2").
+    if (p50_hours and p90_hours and p90_hours / p50_hours > er["E4"]["min_p90_over_p50_ratio"]
+            and p90_hours - p50_hours >= er["E4"]["min_p90_minus_p50_hours"]):
         add("E4")
     if any_need and p50_hours is not None and p50_hours >= er["E5"]["min_p50_hours"]:
         add("E5")

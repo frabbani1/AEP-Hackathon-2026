@@ -12,10 +12,15 @@ from ..alerts import evaluate as alert_eval
 from ..alerts.delivery import STATUS_NOT_SENT, MockDelivery
 from ..alerts.stores import AlertStore, Clock, MemoryStore, utc_now
 from ..alerts.table import load_table
+from ..assistant import factcard
+from ..assistant.compose import Assistant
 from ..backtest import evidence as backtest_evidence
 from ..guidance import prepare
 from ..messages import compose as msg
+from ..messages.templates import CHANNEL_LIMITS
+from ..restoration import config as rest_config
 from ..restoration import model as rest
+from ..restoration.tree import RestorationTree
 from ..risk.confidence import FALLBACK_MESSAGES, downgrade
 from ..risk.engine import RiskEngine
 from ..risk.schema import WhitelistError, _scan_strings
@@ -47,8 +52,11 @@ class Concierge:
     def __init__(self, rows, calibration: Mapping, labor: Mapping,
                  phraser: Callable[[Mapping], str] | None = None, model_id: str | None = None,
                  alert_store: AlertStore | None = None, clock: Clock = utc_now,
-                 evidence_loader: Callable[[], Mapping | None] | None = None):
+                 evidence_loader: Callable[[], Mapping | None] | None = None,
+                 tree: RestorationTree | None = None, restoration_engine: str | None = None,
+                 assistant: Assistant | None = None):
         self.rows, self.labor = rows, labor
+        self.assistant = assistant if assistant is not None else Assistant()      # no model unless one is passed in
         self._evidence_loader = evidence_loader
         self._evidence: Mapping | None = None
         self._evidence_checked: float | None = None
@@ -58,6 +66,11 @@ class Concierge:
         self.alert_table = load_table()
         self.alert_store: AlertStore = alert_store if alert_store is not None else MemoryStore(clock)
         self.delivery = MockDelivery(self.alert_store, clock)
+        self.tree = tree
+        # "v1" or "v2". Read once, so a bad RESTORATION_ENGINE value fails at start-up instead of on a request.
+        self.restoration_engine = restoration_engine or rest_config.engine_from_env()
+        if self.restoration_engine not in rest_config.ENGINES:
+            raise ValueError(f"restoration_engine must be one of {list(rest_config.ENGINES)}")
 
     # ---- input parsing ----------------------------------------------------------------------------------------
     @staticmethod
@@ -88,7 +101,12 @@ class Concierge:
         access = body.get("access", "normal")
         if access not in rest.ACCESS_LEVELS:
             raise BadRequest(f"access must be one of {list(rest.ACCESS_LEVELS)}")
-        damage = body.get("damage")
+        damage, damage_count = body.get("damage"), body.get("damage_count")
+        if damage is not None and damage_count is not None:
+            raise BadRequest("send either damage_count or damage, not both")
+        if damage_count is not None:
+            damage_count = _int(damage_count, "damage_count", rest_config.DAMAGE_COUNT_MIN,
+                                rest_config.DAMAGE_COUNT_MAX)
         items = None
         if damage is not None:
             if not isinstance(damage, list) or not (1 <= len(damage) <= 10):
@@ -100,7 +118,7 @@ class Concierge:
                 if d["asset_type"] not in rest.ASSET_LEVEL:
                     raise BadRequest(f"asset_type must be one of {sorted(rest.ASSET_LEVEL)}")
                 items.append((d["asset_type"], _int(d["qty"], "qty", 1, rest.MAX_JOBS_PER_ASSET)))
-        return {"crews": crews, "access": access, "damage": items}
+        return {"crews": crews, "access": access, "damage": items, "damage_count": damage_count}
 
     # ---- engines ----------------------------------------------------------------------------------------------
     def risk(self, token: str, severity: Any) -> dict:
@@ -121,7 +139,8 @@ class Concierge:
                 level = downgrade(level)
         try:
             return rest.estimate(token=token if row else None, row=row, severity=sev_out, fallback=fallback,
-                                 base_confidence=level, labor=self.labor, **scenario)
+                                 base_confidence=level, labor=self.labor, tree=self.tree,
+                                 engine=self.restoration_engine, **scenario)
         except rest.RestorationError as e:
             raise BadRequest(str(e)) from None
 
@@ -304,21 +323,54 @@ class Concierge:
             raise RuntimeError("response blocked: it looked like it contained an internal identifier") from None
         return out
 
+    @staticmethod
+    def _prior_display(body: Mapping) -> str | None:
+        prior = body.get("prior_estimate")
+        if prior is None:
+            return None
+        if not isinstance(prior, dict) or set(prior) != {"low_hours", "high_hours"}:
+            raise BadRequest("prior_estimate needs low_hours and high_hours")
+        lo, hi = _int(prior["low_hours"], "low_hours", 1, 2000), _int(prior["high_hours"], "high_hours", 1, 2000)
+        if lo > hi:
+            raise BadRequest("prior_estimate low_hours cannot be above high_hours")
+        return rest.display(lo, hi)
+
+    # ---- assistant (spec-06) ----------------------------------------------------------------------------------
+    def assist(self, body: Mapping) -> dict:
+        """One of eight kinds of customer text. Every input is validated before the model can be called, and no
+        customer string can reach a prompt: the card is built from engine output and closed enums only."""
+        kind = body.get("kind")
+        if not isinstance(kind, str) or kind not in factcard.KINDS:
+            raise BadRequest(f"kind must be one of {list(factcard.KINDS)}")
+        token, severity, needs, scenario = self.token(body), self.severity(body), self.needs(body), self.scenario(body)
+        channel = body.get("channel", "sms")
+        if not isinstance(channel, str) or channel not in CHANNEL_LIMITS:
+            raise BadRequest(f"channel must be one of {list(CHANNEL_LIMITS)}")
+        stage = body.get("stage")
+        if stage is not None and (not isinstance(stage, str) or stage not in factcard.STAGES):
+            raise BadRequest(f"stage must be one of {list(factcard.STAGES)}")
+        use_llm = body.get("use_llm", True)
+        if not isinstance(use_llm, bool):
+            raise BadRequest("use_llm must be true or false")
+        prior_display = self._prior_display(body)
+        known = self.rows.get(token) is not None            # the allow-list: a well-formed unknown token never reaches the model
+        risk = self.risk(token, severity)
+        restoration = self.restoration(token, severity, scenario)
+        guidance = self.guidance(risk, restoration, needs)
+        est = restoration.get("estimate")
+        card = factcard.build(kind=kind, risk=risk, restoration=restoration, channel=channel,
+                              has_declared_need=any(needs.values()), prior_display=prior_display, stage=stage)
+        typical = None if not est else est.get("p50_hours", est.get("typical_hours"))
+        return self.assistant.respond(kind, card=card, guidance=guidance, typical_hours=typical, needs=needs,
+                                      use_llm=use_llm, known=known)
+
     def message(self, token: str, severity: Any, body: Mapping, risk: Mapping, restoration: Mapping,
                 needs: Mapping) -> dict:
         mtype, channel = body.get("message_type"), body.get("channel", "sms")
         use_llm = body.get("use_llm", True)
         if not isinstance(use_llm, bool):
             raise BadRequest("use_llm must be true or false")
-        prior_display = None
-        prior = body.get("prior_estimate")
-        if prior is not None:
-            if not isinstance(prior, dict) or set(prior) != {"low_hours", "high_hours"}:
-                raise BadRequest("prior_estimate needs low_hours and high_hours")
-            lo, hi = _int(prior["low_hours"], "low_hours", 1, 2000), _int(prior["high_hours"], "high_hours", 1, 2000)
-            if lo > hi:
-                raise BadRequest("prior_estimate low_hours cannot be above high_hours")
-            prior_display = rest.display(lo, hi)
+        prior_display = self._prior_display(body)
         sev = risk["severity"]
         try:
             card = msg.fact_card(
@@ -339,8 +391,12 @@ class Concierge:
             _only(body, common)
             out = self.risk(self.token(body), self.severity(body))
         elif route == "restoration":
-            _only(body, common | {"crews", "access", "damage"})
+            _only(body, common | {"crews", "access", "damage", "damage_count"})
             out = self.restoration(self.token(body), self.severity(body), self.scenario(body))
+        elif route == "assistant":
+            _only(body, common | {"kind", "channel", "stage", "crews", "access", "damage", "damage_count", "needs",
+                                  "use_llm", "prior_estimate"})
+            out = self.assist(body)
         elif route == "alerts/enroll":
             _only(body, {"token", "channels", "needs", "message_types"})
             out = self.enroll(body)
@@ -353,7 +409,7 @@ class Concierge:
                                   "opt_in"})
             out = self.simulate(body)
         elif route in ("guidance", "alerts", "summary", "messages"):
-            allowed = common | {"crews", "access", "damage", "needs"}
+            allowed = common | {"crews", "access", "damage", "damage_count", "needs"}
             if route in ("alerts", "summary"):
                 allowed |= {"channels", "prior_typical_hours", "hours_until_storm", "hours_since_last_update", "opt_in"}
             if route == "messages":

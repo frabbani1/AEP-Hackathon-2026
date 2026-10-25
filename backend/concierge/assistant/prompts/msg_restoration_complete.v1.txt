@@ -1,0 +1,5 @@
+Task: write one restoration-complete message for the channel named in the card.
+
+Say power has been restored at the customer's location and that if their power is still out they should report it. Do not mention any time, duration or outage length. Respect the channel: push is a very short line, sms is two or three short sentences, voice is spoken-style sentences, email may be a short paragraph.
+
+Output shape: {"text": "<the message>"}

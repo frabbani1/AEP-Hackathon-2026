@@ -92,6 +92,11 @@ def validate(data: dict[str, Any]) -> None:
         _need(rid in data["escalation"], f"missing escalation rule {rid}")
         _reason(data["escalation"][rid], f"escalation rule {rid}")
         _need(isinstance(data["escalation"][rid].get("action"), str), f"escalation rule {rid} needs an action")
+    e4 = data["escalation"]["E4"]
+    for key in ("min_p90_over_p50_ratio", "min_p90_minus_p50_hours"):
+        value = e4.get(key)
+        _need(isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0,
+              f"escalation rule E4 needs a positive {key}")
     _need(len(data["assumptions"]) >= 3, "assumptions must list at least three statements")
 
 

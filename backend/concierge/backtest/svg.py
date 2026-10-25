@@ -151,7 +151,12 @@ def repair_hist_svg(hist: Mapping | None) -> str:
     if band:
         a, b = xpos(band[0]), xpos(band[1])
         out.append(f'<rect x="{a:.1f}" y="{MT}" width="{max(b - a, 2):.1f}" height="{PH}" fill="{MODEL}" fill-opacity="0.18" stroke="{MODEL}" stroke-dasharray="4 3"/>')
-        out.append(_text(a + 4, MT + PH - 6, "predicted P50 to P90", size=11, fill=MODEL))
+        label = "predicted P50 to P90 (beyond the chart)" if band[0] >= max(
+            (b["from_day"] for b in bins if b["to_day"] is None), default=10 ** 9) else "predicted P50 to P90"
+        if a > ML + PW * 0.7:                         # near the right edge: write the label to the left of the band
+            out.append(_text(a - 4, MT + 30, label, "end", 11, fill=MODEL))
+        else:
+            out.append(_text(a + 4, MT + 30, label, size=11, fill=MODEL))
     for i, (b, s) in enumerate(zip(bins, shares)):
         x = ML + bw * i
         out.append(f'<rect x="{x + 2:.1f}" y="{ymap(s):.1f}" width="{bw - 4:.1f}" height="{MT + PH - ymap(s):.1f}" fill="{INK}" fill-opacity="0.75"/>')

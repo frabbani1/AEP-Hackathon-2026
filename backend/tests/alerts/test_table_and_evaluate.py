@@ -41,6 +41,18 @@ def test_missing_cell_is_rejected_with_its_name(table):
         load_table_from(broken)
 
 
+def test_e4_needs_both_thresholds(table):
+    for key in ("min_p90_over_p50_ratio", "min_p90_minus_p50_hours"):
+        for bad in (None, 0, -1, "4"):
+            broken = copy.deepcopy(table.data)
+            if bad is None:
+                del broken["escalation"]["E4"][key]
+            else:
+                broken["escalation"]["E4"][key] = bad
+            with pytest.raises(TableError, match=key):
+                load_table_from(broken)
+
+
 def test_bad_tier_and_missing_reason_are_rejected(table):
     bad = copy.deepcopy(table.data)
     bad["base_tier"]["High"]["short"]["tier"] = "gold"
@@ -247,8 +259,14 @@ def test_long_outage_with_medical_need(table):
 def test_each_escalation_trigger(table):
     assert ids(run(table, p50=24, p90=25)) == ["E1"]
     assert "E3" in ids(run(table, p50=40, p90=72))
-    assert "E4" in ids(run(table, band="Medium", p50=4, p90=14))
-    assert "E4" not in ids(run(table, band="Medium", p50=4, p90=12))
+    # E4 needs both a ratio above 4 and a gap of at least 24 hours
+    assert "E4" in ids(run(table, band="Medium", p50=3, p90=30))
+    assert "E4" not in ids(run(table, band="Medium", p50=4, p90=14))     # ratio 3.5 and gap 10
+    assert "E4" not in ids(run(table, band="Medium", p50=2, p90=9))      # ratio 4.5 but gap 7: wide only by rounding
+    assert "E4" not in ids(run(table, band="Medium", p50=10, p90=40))    # gap 30 but ratio exactly 4
+    assert "E4" in ids(run(table, band="Medium", p50=10, p90=41))
+    assert "E4" not in ids(run(table, band="Medium", p50=5, p90=28))     # ratio 5.6 but gap 23
+    assert "E4" in ids(run(table, band="Medium", p50=6, p90=30))         # ratio 5, gap exactly 24
     assert "E2" in ids(run(table, band=None, p50=None, needs={"medical_equipment": True}))
     assert ids(run(table, p50=3, p90=4)) == []
 

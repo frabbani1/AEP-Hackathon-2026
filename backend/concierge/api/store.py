@@ -2,11 +2,13 @@
 
 Cloud: premise rows from DynamoDB (one GetItem per request), calibration.json and labor_standards.json from the clean
 bucket's serving/ and curated/ prefixes. Local: set PREMISE_FILE, CALIBRATION_FILE and LABOR_FILE to read the files in
-data/ instead, so the whole API can be exercised without AWS.
+data/ instead, so the whole API can be exercised without AWS. The restoration tree (serving/risk/restoration_tree.json,
+TREE_FILE locally) is only read when the v2 restoration engine is on.
 """
 from __future__ import annotations
 
 import json
+import logging
 import os
 from collections import OrderedDict
 from decimal import Decimal
@@ -98,3 +100,20 @@ def load_labor() -> dict:
     if os.environ.get("LABOR_FILE"):
         return json.loads(Path(os.environ["LABOR_FILE"]).read_text())
     return _s3_json("curated/labor_standards.json")
+
+
+def load_tree():
+    """The restoration tree, or None when the artifact has not been published (premises then use the three-level
+    fallback path and the response says so). A TREE_FILE that does not exist is an error, not a silent fallback."""
+    from ..restoration.tree import RestorationTree
+    if os.environ.get("TREE_FILE"):
+        return RestorationTree.from_dict(json.loads(Path(os.environ["TREE_FILE"]).read_text()))
+    from botocore.exceptions import ClientError
+    try:
+        doc = _s3_json("serving/risk/restoration_tree.json")
+    except ClientError as e:
+        if e.response.get("Error", {}).get("Code") != "NoSuchKey":
+            raise
+        logging.getLogger("concierge.api").warning("restoration_tree.json not found; using the v1 level path")
+        return None
+    return RestorationTree.from_dict(doc)

@@ -15,10 +15,10 @@
 ## 3. Restoration evaluation
 
 - [x] 3.1 Implement observed per-circuit statistics (median, P90) with backlog cutoff `B`, censoring of unrepaired rows, and suppression of circuits with fewer than 10 records; test each exclusion counter
-- [ ] 3.2 Implement circuit-level calls into the spec-03 engine returning the pooled job-completion distribution; test on the fixture tree against hand values
-  - Done against the `CircuitEngine` hook (`rest_eval.predict`, `backtest/adapter.py`), tested with stub engines and hand-computed percentiles. Open until `concierge/restoration/circuit.py` exists and is run on a real fixture tree.
-- [ ] 3.3 Implement the oracle-damage and forecast-damage runs
-  - Done (`oracle_predictions`, `forecast_predictions` inside the leak guard) and tested with stubs. Open until the real engine runs them.
+- [x] 3.2 Implement circuit-level calls into the spec-03 engine returning the pooled job-completion distribution; test on the fixture tree against hand values
+  - Done: `concierge/restoration/circuit.py` runs spec-03's pricing, scheduler and seeded streams with the whole circuit as the path; tested on spec-03's fixture tree (`tests/backtest/test_circuit_engine.py`) and on the real tables.
+- [x] 3.3 Implement the oracle-damage and forecast-damage runs
+  - Done (`oracle_predictions`, `forecast_predictions` inside the leak guard); both ran on the real engine.
 - [x] 3.4 Implement the S1-only fit of `k` with the identifiability rule and the "uncalibrated" fallback; test sparse-data and rich-data fixtures; test that permuting S2 leaves `k` unchanged
 - [x] 3.5 Implement coverage (P50, P90, with backlog as misses), MAE, within-one-day, and the three baselines with the paired bootstrap; test the tie case reports "does not beat"
 - [x] 3.6 Run at `B = 3` and `B = 7` and record excluded shares for S1 and S2
@@ -38,7 +38,7 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Run on real data. Record in `design.md`: base rate, lift per band, permutation p, AUC with interval, fitted `k` or "not identifiable", coverage P50 and P90 for both runs, MAE against each baseline
-  - Risk numbers, backlog shares, the "not identifiable" crews result and baseline MAE are recorded in `design.md` (Results). Model coverage, model MAE and fitted `k` wait for the spec-03 engine; re-run `scripts/run_backtest.py` then.
+- [x] 6.1 Run on real data. Record in `design.md`: base rate, lift per band, permutation p, AUC with interval, fitted `k` or "not identifiable", coverage P50 and P90 for both runs, MAE against each baseline
+  - Recorded in `design.md` (Results): risk numbers, backlog shares, crews "not identifiable", coverage and MAE for both runs, baselines. Fitted `k` does not exist because the fit is not identifiable.
 - [ ] 6.2 Read the generated verdicts with the team. If the model does not beat a baseline, keep that sentence in the demo script and the README
 - [ ] 6.3 Upload `backtest.json` and plots to the clean bucket `serving/` prefix only after review

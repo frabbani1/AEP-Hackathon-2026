@@ -21,6 +21,8 @@
 <text x="340.0" y="408.0" text-anchor="middle" font-size="12" fill="#1f2933">Days from report to repair</text>
 <rect x="379.4" y="48" width="236.6" height="316" fill="#f3d9d9"/>
 <text x="383.4" y="62.0" text-anchor="start" font-size="11" fill="#1f2933">backlog (not scored)</text>
+<rect x="595.6" y="48" width="20.4" height="316" fill="#0b5cab" fill-opacity="0.18" stroke="#0b5cab" stroke-dasharray="4 3"/>
+<text x="591.6" y="78.0" text-anchor="end" font-size="11" fill="#0b5cab">predicted P50 to P90 (beyond the chart)</text>
 <rect x="66.0" y="119.4" width="74.9" height="244.6" fill="#1f2933" fill-opacity="0.75"/>
 <text x="103.4" y="382.0" text-anchor="middle" font-size="11" fill="#1f2933">0</text>
 <rect x="144.9" y="155.4" width="74.9" height="208.6" fill="#1f2933" fill-opacity="0.75"/>

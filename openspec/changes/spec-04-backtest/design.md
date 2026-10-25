@@ -216,14 +216,46 @@ not a team reading. Task 6.2 (reading them with the team) is still open.
 | Crews fit | not identifiable, so 3 crews, "uncalibrated" | not identifiable, so 3 crews, "uncalibrated" |
 | Baseline MAE vs observed circuit median (constant / circuit median / one day) | 0.52 / 0.52 / 0.52 days | 0.68 / 0.73 / 0.68 days |
 
-Still open: coverage of P50 and P90 for both runs, MAE of the model, and the fitted `k` interval. They need the spec-03 engine
-(`concierge/restoration/circuit.py`, see `backtest/adapter.py`). Re-run `scripts/run_backtest.py` once it exists and copy the
-numbers here. A flat one-day guess is already within about 0.5 to 0.7 days of the observed circuit medians, so the model has to be close to day-exact to beat it.
+**Restoration, scored against the real spec-03 engine** (`concierge/restoration/circuit.py`, 2026-10-24, Feb 2025 circuits with
+10+ usable repair records, 3 crews because the fit is not identifiable)
+
+| Item | B = 3 | B = 7 |
+| --- | --- | --- |
+| Circuits / records scored | 21 / 1,006 | 22 / 1,064 |
+| Forecast damage: coverage P50 / P90 | 77% / 82% (P90 80% with backlog as misses) | 73% / 78% |
+| Forecast damage: MAE of P50 vs observed median, within one day | 4.87 days, 29% | 4.87 days, 27% |
+| Oracle damage: coverage P50 / P90 | 99% / 100% | 96% / 100% |
+| Oracle damage: MAE, within one day | 7.42 days, 10% | 7.12 days, 14% |
+| Baseline MAE (flat one day / Sep 2024 median / Sep 2024 circuit median) | 0.52 / 0.52 / 0.52 days | 0.68 / 0.68 / 0.73 days |
+| Forecast model minus baseline MAE (95% range) | +4.35 (2.02 to 7.17), does not beat | +4.19 (1.96 to 6.95), does not beat |
+| Oracle model minus baseline MAE (95% range) | +6.90 (3.39 to 11.16), does not beat | +6.44 (2.81 to 10.85), does not beat |
+| Crews fit | not identifiable (3 crews, uncalibrated) | not identifiable |
+| In-sample ceiling on Feb 2025 ("not a test") | best crews = 20, the top of the grid | 20 |
+
+**Reading.** The restoration range does not beat any of the three baselines, in either run and at either cutoff. The coverage
+numbers look healthy only because the predictions are far too long: observed circuit medians are 0 to 2 days, while the predicted
+P50 per circuit runs from under a day to 34 days (oracle run), so almost every record falls under P50 and P90. A P50 coverage of
+77% to 99% against a target of 50% is over-coverage, not accuracy. The verdict `rest_coverage_p90` reads `supports` because its
+rule is a band of 80% to 97% on the forecast run; it should not be read alone. The same pattern appears at 20 crews (the in-sample
+ceiling is the edge of the grid), so adding crews does not close the gap.
+
+This answers the open question about the proxy: the time until every repair on a circuit is finished (the pooled completion that
+spec-04 D3 asked for) is much longer than the time-to-repair recorded per damaged asset, which is what ARCOS holds. The model
+estimates a customer's wait behind the repairs upstream of them; the observed numbers are how long each damaged asset took.
+They are not the same quantity, so this backtest cannot confirm the customer-facing range, and it should not be quoted as if it did.
+Forecast damage scores better than oracle damage here partly because circuits with no Sep 2024 history get the engine's floor
+of 0.05 expected repairs, which produces near-zero predictions.
+
+Engine notes: a circuit with no tree (breaker serving under 10 premises) has no prediction; every trial has at least one repair;
+normal access and the "Medium" shared spread are used, because a circuit has no per-premise confidence level.
 
 ## Notes on implementation
 
 - Backlog means `repair_days > B`. The data has nothing at 7 days, so `B = 7` gives the same set as the curated `is_backlog`.
 - Row classification order is: not repaired (censored), no circuit, backlog, usable.
 - Published histogram bins and risk bands with fewer than 10 records or circuits are merged or hidden (project privacy rule).
+- `scripts/run_backtest.py` reads `artifacts/curated/tables` by default. The `device_dim` in the local `artifacts/curated` is an older
+  build that the tree builder rejects ("a device must be deeper than its parent"), so the real run used `--tables data/curated/tables`.
+  Rebuild `artifacts/curated` with the current pipeline before using the default path.
 - `/evidence` needs an API Gateway route (`GET /evidence` and `GET /api/evidence`) in `infra/lib/stack.ts`. That edit is
   deliberately not made yet, so the `cdk diff` under team review (spec-05 task 6.1b) does not change.

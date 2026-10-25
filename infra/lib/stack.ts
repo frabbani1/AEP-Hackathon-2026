@@ -92,11 +92,14 @@ export class ConciergeStack extends cdk.Stack {
     // rewriting the URL. The handler strips the /api prefix.
     for (const prefix of ["", "/api"]) {
       api.addRoutes({ path: `${prefix}/health`, methods: [apigw.HttpMethod.GET], integration });
-      for (const route of ["risk", "restoration", "guidance", "alerts", "messages", "summary",
+      for (const route of ["risk", "restoration", "guidance", "alerts", "messages", "summary", "assistant",
         "alerts/enroll", "alerts/unenroll", "alerts/simulate"]) {
         api.addRoutes({ path: `${prefix}/${route}`, methods: [apigw.HttpMethod.POST], integration });
       }
       api.addRoutes({ path: `${prefix}/alerts/audit`, methods: [apigw.HttpMethod.GET], integration });
+      // Backtest verdicts and limits (spec-04). Read-only aggregates; answers "unavailable" until a reviewed
+      // backtest.json is uploaded to serving/backtest/.
+      api.addRoutes({ path: `${prefix}/evidence`, methods: [apigw.HttpMethod.GET], integration });
     }
     // Light throttle so a runaway client cannot run up Bedrock calls. Not authentication.
     const stage = api.defaultStage!.node.defaultChild as apigw.CfnStage;

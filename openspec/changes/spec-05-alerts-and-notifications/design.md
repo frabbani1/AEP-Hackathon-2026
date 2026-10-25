@@ -92,11 +92,11 @@ Escalation triggers (rule ids `E*`). Each is a recommendation for a person. Noth
 | E1 | `p50_hours >= 24` | customer care follow-up |
 | E2 | `medical` and (`p50_hours >= 4` or Unrated) | priority outreach |
 | E3 | `p90_hours >= 72` | share shelter and community resource information |
-| E4 | `p90_hours / p50_hours > 3` | human review of the estimate before it is shared |
+| E4 | `p90_hours / p50_hours > 4` and `p90_hours - p50_hours >= 24` | human review of the estimate before it is shared |
 | E5 | `any_need` and `p50_hours >= 24` | resource outreach for the declared need |
 
 All thresholds are named constants in the JSON with a `reason` string in plain language. They are assumptions.
-The E4 ratio was set for the v1 range; re-check it after spec-03 ships (task 6.3).
+The E4 rule was first set for the v1 range (ratio above 3). Task 6.3 re-checked it against restoration-v2 and replaced it with a ratio above 4 plus a 24-hour gap (see "E4 check against restoration-v2" below).
 Mapping from v1: R1 to R3 -> `T-*` plus `K-pre`; R4b -> `K-out`; R5 -> `K-upd`; R6 -> `K-restored`; R7 -> E1;
 R8 -> E2; R9 -> E3; R10 -> E4.
 
@@ -241,4 +241,55 @@ backend/concierge/messages/templates.py   four types x four channels
 - Should `info` tier customers get pre-storm messages if they ticked "opt in"? The design says yes; confirm.
 - Is a 24-hour enrollment expiry long enough for the judging window?
 - The audit write is best effort: a failed write is logged and does not block the customer's answer. Should it fail closed instead?
-- Should E4 use P90/P50 > 3, or a different ratio after the Monte Carlo range exists?
+- E4 was changed from P90/P50 > 3 to P90/P50 > 4 and P90 - P50 >= 24 hours after the restoration-v2 check below (it fires for
+  about 5% of premises in a typical storm). Still open: the team should confirm that choice (option 2 below) and how many reviews a person can handle.
+
+## E4 check against restoration-v2 (task 6.3)
+
+Run on 2026-10-24 with `scripts/check_e4_ratio.py`: 3,000 random scored premises from the real artifacts (every one with a
+tree position), default scenario (3 crews, normal access), four storm presets, the real `restoration-v2` engine. The rule under
+test was the original rule in `rules_table.json`: E4 fires when `p90_hours / p50_hours > 3.0`.
+
+| Storm preset | Median ratio | 90th percentile of ratio | Highest | E4 fires |
+| --- | --- | --- | --- | --- |
+| sep-2024-like | 3.67 | 4.00 | 10.4 | 93% |
+| typical | 3.67 | 5.00 | 13.1 | 86% |
+| feb-2025-like | 3.67 | 5.33 | 12.0 | 80% |
+| beyond-observed | 3.67 | 5.50 | 13.3 | 79% |
+
+Under a typical storm E4 fires for 98% of premises whose P50 is under 4 hours, 77% when it is 4 to 23 hours, and 27% when it is a
+day or more. By risk band it fires for 97% of Low, 86% of Medium and 55% of High premises. If the ratio were set at 2 / 2.5 / 3 /
+4 / 5 / 6, E4 would fire for 99% / 95% / 86% / 23% / 7% / 3% of premises in a typical storm.
+
+**Result: the threshold of 3 no longer works** (the table above is the original rule, kept as the evidence for the change). The v2 range is wide by construction (a shared labor spread, a spread per repair,
+crews that are present 85% of the time, and a long upper tail), so a typical P90/P50 is already 3.7. Short outages are the worst
+case: with whole-hour rounding a P50 of 2 hours and a P90 of 8 hours already counts as "very wide". In v1 the ratio came from fixed factors (1.9 to 4.0, before
+rounding), so 3 was a reasonable cut-off; with v2 it flags nearly everyone, and a "human review"
+recommendation for 86% of customers is not a useful escalation.
+
+**Decision (2026-10-24, applied; the team can still overturn it).** Option 2 below with the ratio raised to 4. The rules table now
+holds `min_p90_over_p50_ratio = 4.0` and `min_p90_minus_p50_hours = 24`, and E4 fires only when both hold. This changes the rules-table hash,
+so audit entries written before the change replay against the old hash only. The spec scenarios and tests use `p50 = 3, p90 = 30` (fires)
+and `p50 = 4, p90 = 14` and `p50 = 2, p90 = 9` (do not fire). Options considered:
+
+1. Raise the ratio to 5. E4 then fires for about 7% of premises in a typical storm.
+2. Keep a ratio but add a floor, here `p90 - p50 >= 24` hours, so a 2-hour to 8-hour range is not "wide". This fits what
+   a reviewer cares about (a wide range in absolute time) and removes the rounding effect. **Chosen, with ratio 4.**
+3. Drop E4 and rely on E1 and E3, which already use absolute P50 and P90 thresholds.
+
+**Re-run with the chosen rule** (`scripts/check_e4_ratio.py`, 3,000 random scored premises, 3 crews, normal access, artifacts rebuilt
+from `data/` with a throwaway salt):
+
+| Storm preset | E4 fires |
+| --- | --- |
+| sep-2024-like | 1.7% |
+| typical | 4.5% |
+| feb-2025-like | 7.1% |
+| beyond-observed | 10.1% |
+
+Under a typical storm E4 fires for 0.1% of Low, 4.1% of Medium and 20.8% of High premises, and for 0.1% of premises whose P50 is under
+4 hours, 10.5% when it is 4 to 23 hours and 8.8% when it is a day or more. For comparison, in a typical storm a ratio of 4 alone would
+fire for 22%, and ratio 4 with a gap floor of 12 / 24 / 36 / 48 hours would fire for 16% / 5% / 2% / 1%.
+Whether a person can review 5% of customers in a typical storm (about 10% in the worst preset) is a staffing question for the team.
+Caveats: three crews and normal access only, and the spreads in the range are assumptions that the backtest (`docs/backtest.md`) shows
+are not fitted to observed repairs.

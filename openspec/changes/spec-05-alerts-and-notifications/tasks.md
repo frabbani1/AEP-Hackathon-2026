@@ -41,9 +41,10 @@
 
 - [x] 6.1 Add the `aep-demo-alerts` DynamoDB table (pay-per-request, TTL attribute), the new routes, and the `ENROLL_TABLE` variable to `infra/lib/stack.ts`, and the table permission to `scripts/setup_iam.sh`
 - [ ] 6.1b Run `cdk diff` with AWS credentials and review it with the team before any deploy; run `scripts/setup_iam.sh` only after that review
-  - Diff run 2026-10-24 (account 464604123481, us-east-2): 1 stack changed, no replacements or deletions. Adds the `aep-demo-alerts` table, 8 routes with Lambda permissions (`/alerts/*` and `/api/alerts/*`), `ENROLL_TABLE` on the function, a code bundle update, an API description change, and an `AlertsTableName` output. Team review still pending; nothing deployed.
+  - Diff re-run 2026-10-24 after adding `GET /evidence`, `POST /assistant` and their `/api` twins (account 464604123481, us-east-2, read-only change set, nothing deployed): 1 stack changed, no replacements or deletions. Adds the `aep-demo-alerts` table, 12 routes with Lambda invoke permissions (`/alerts/enroll|unenroll|simulate|audit`, `/evidence` and `/assistant`, each also under `/api`), `ENROLL_TABLE` on the function, a code bundle update, an API description change, and an `AlertsTableName` output. CDK warns that the clean-bucket policy for the CloudFront origin is not managed by CDK (imported bucket); that is unchanged by this diff. Team review still pending. The Lambda role is imported, so `scripts/setup_iam.sh` (which adds the alerts-table permission) must also be run after the review, or the new routes will fail at runtime.
 - [x] 6.2 Add `ENROLL_TABLE` environment handling: `DynamoStore` when set, `MemoryStore` otherwise
-- [ ] 6.3 After spec-03 ships, check E4's ratio against real P90/P50 values and record the result in `design.md`
+- [x] 6.3 After spec-03 ships, check E4's ratio against real P90/P50 values and record the result in `design.md`
+  - Done with `scripts/check_e4_ratio.py` (3,000 real premises, restoration-v2). At a ratio of 3, E4 fired for 86% of premises in a typical storm. The rule is now ratio above 4 and gap of at least 24 hours (`rules_table.json`), which fires for 4.5% in a typical storm (1.7% to 10.1% across presets). Details and the options not taken are in `design.md`; the team can still overturn the choice.
 - [x] 6.4 Update `docs/api.md` with the new routes, the demo-only notice, and the no-authentication warning for enrollment and audit
 
 ## 7. Verification

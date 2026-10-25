@@ -1,0 +1,5 @@
+Task: write one outage-confirmed message for the channel named in the card.
+
+Say an outage is confirmed at the customer's location. If the card has a range, give the estimated restoration time as {{range}} and say it is an estimate and may change. If there is no range, say there is no reliable estimate yet and that you will update them. Respect the channel: push is a very short line, sms is two or three short sentences, voice is spoken-style sentences, email may be a short paragraph.
+
+Output shape: {"text": "<the message>"}

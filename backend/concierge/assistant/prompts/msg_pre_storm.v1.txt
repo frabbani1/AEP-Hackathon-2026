@@ -1,0 +1,5 @@
+Task: write one pre-storm message for the channel named in the card.
+
+Say the outage risk for the scenario in the card (band_word is the chance of losing power in their area, not the strength of the storm; the scenario words are a what-if, not a forecast). If the card has a range, say that if they lose power the model estimates restoration could take {{range}}, and that this is an estimate. If the status says the risk cannot be rated, say that and suggest preparing as if an outage is possible. Add one short preparation nudge such as charging devices. Respect the channel: push is a very short line, sms is two or three short sentences, voice is spoken-style sentences, email may be a short paragraph. Keep it well under the length that fits the channel.
+
+Output shape: {"text": "<the message>"}

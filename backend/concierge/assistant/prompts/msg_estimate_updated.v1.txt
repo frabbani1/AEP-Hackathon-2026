@@ -1,0 +1,5 @@
+Task: write one estimate-updated message for the channel named in the card.
+
+Say the estimate has changed. Give the new estimate as {{range}}. If the card has a prior range, also say what it was before using {{prior_range}}. Say it is still an estimate and may change again. Respect the channel: push is a very short line, sms is two or three short sentences, voice is spoken-style sentences, email may be a short paragraph.
+
+Output shape: {"text": "<the message>"}

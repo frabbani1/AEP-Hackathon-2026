@@ -203,9 +203,10 @@
    "reason": "The high end of the range reaches several days, so share shelter and resource information."
   },
   "E4": {
-   "min_p90_over_p50_ratio": 3.0,
+   "min_p90_over_p50_ratio": 4.0,
+   "min_p90_minus_p50_hours": 24,
    "action": "human_review",
-   "reason": "The estimate range is very wide, so a person should review it before it is shared."
+   "reason": "The estimate range is very wide, in both relative and absolute terms, so a person should review it before it is shared."
   },
   "E5": {
    "min_p50_hours": 24,

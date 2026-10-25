@@ -6,7 +6,7 @@ import hmac
 import os
 import re
 
-TOKEN_RE = re.compile(r"^p_[0-9a-f]{16}$")
+TOKEN_RE = re.compile(r"^p_[0-9a-f]{16}\Z")      # \Z, not $: "$" would accept a trailing newline
 SALT_ENV = "CONCIERGE_TOKEN_SALT"
 
 
