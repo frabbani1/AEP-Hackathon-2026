@@ -656,6 +656,12 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.stepper__name {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
 .stepper__label {
   font-weight: 400;
 }

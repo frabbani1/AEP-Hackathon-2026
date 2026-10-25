@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import type { ChatMessage } from "../api";
+import { TAG_HELP } from "../lib/explain";
+import { InfoTip } from "./InfoTip";
 import { BellIcon, BoltIcon, ChecklistIcon, ClockIcon } from "./icons";
 import "./ChatThread.css";
 
@@ -79,8 +81,18 @@ function Message({ message }: { message: ChatMessage }) {
         <p className="msg__author">
           <span className="sr-only">Outage Concierge said: </span>
           <span aria-hidden="true">Outage Concierge</span>
-          {message.isEstimate && <span className="msg__tag">Model estimate &middot; not confirmed</span>}
-          {message.isForecast && <span className="msg__tag msg__tag--forecast">Prediction only &middot; no outage data</span>}
+          {message.isEstimate && (
+            <>
+              <span className="msg__tag">Model estimate &middot; not confirmed</span>
+              <InfoTip label="model estimates">{TAG_HELP.model}</InfoTip>
+            </>
+          )}
+          {message.isForecast && (
+            <>
+              <span className="msg__tag msg__tag--forecast">Prediction only &middot; no outage data</span>
+              <InfoTip label="prediction only">{TAG_HELP.forecast}</InfoTip>
+            </>
+          )}
         </p>
         <Paragraphs text={message.content} />
       </div>

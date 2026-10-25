@@ -1,14 +1,19 @@
 import type { ZoneWeather } from "../../api";
+import { STORM_MULTIPLIER_HELP, WEATHER_GUST_HELP } from "../../lib/explain";
+import { InfoTip } from "../InfoTip";
 import { Card } from "./Card";
 import { WarningIcon } from "../icons";
 
 const num = (value: number | null | undefined, unit: string) =>
   value === null || value === undefined ? "n/a" : `${Math.round(value)}${unit}`;
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Stat({ label, value, sub, info }: { label: string; value: string; sub?: string; info?: string }) {
   return (
     <div className="weather-grid__item">
-      <div className="weather-grid__label">{label}</div>
+      <div className="weather-grid__label">
+        {label}
+        {info && <InfoTip label={label.toLowerCase()}>{info}</InfoTip>}
+      </div>
       <div className="weather-grid__value">{value}</div>
       {sub && <div className="weather-grid__sub">{sub}</div>}
     </div>
@@ -47,12 +52,18 @@ export function WeatherCard({ weather }: { weather: ZoneWeather }) {
         {ahead48h && (
           <Stat
             label="Peak gust, next 48 hours"
+            info={WEATHER_GUST_HELP}
             value={num(ahead48h.peakGustMph, " mph")}
             sub={ahead48h.precipIn ? `${ahead48h.precipIn.toFixed(1)} in of rain expected` : "No significant rain expected"}
           />
         )}
         {usedWeather && severity.multiplier !== undefined && (
-          <Stat label="Storm strength used" value={`${severity.multiplier.toFixed(2)}\u00d7`} sub="vs. a typical past storm" />
+          <Stat
+            label="Storm strength used"
+            info={STORM_MULTIPLIER_HELP}
+            value={`${severity.multiplier.toFixed(2)}\u00d7`}
+            sub="vs. a typical past storm"
+          />
         )}
       </div>
 

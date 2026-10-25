@@ -1,0 +1,93 @@
+/* The circled "i" help button and its bubble. */
+
+.infotip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin: 0 0 0 4px;
+  vertical-align: middle;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--aep-blue-dark);
+  text-transform: none;
+  cursor: help;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+}
+
+.infotip:hover {
+  color: var(--aep-blue-darker);
+  background-color: #e5f1f9;
+}
+
+.infotip__bubble {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000;
+  width: min(18rem, calc(100vw - 16px));
+  padding: 10px 12px;
+  font-family: var(--font);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: normal;
+  color: #fff;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  background-color: var(--aep-blue-darker);
+  border-radius: 0.25rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.12s ease-in-out,
+    visibility 0.12s;
+}
+
+.infotip__bubble.is-open {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* A source label (pill) with its help button beside it. */
+.tagwrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* A label and its help button on one line, when the label itself can't hold the button. */
+.tiprow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tiprow > :first-child {
+  margin: 0;
+}
+
+/* Heading (or label) with its help button beside it, not inside it. */
+.titletip {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.titletip > :first-child {
+  min-width: 0;
+}
+
+.titletip--sub {
+  margin: 18px 0 8px;
+}
+
+.titletip--sub > :first-child {
+  margin: 0;
+}

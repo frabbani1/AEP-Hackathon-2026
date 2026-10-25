@@ -1,6 +1,8 @@
 import type { ChangeEvent } from "react";
 import type { MapZone, RiskBand } from "../../api";
 import { BAND_LABEL, NOT_RATED_LABEL } from "../../lib/bands";
+import { AREA_HELP } from "../../lib/explain";
+import { InfoTip } from "../InfoTip";
 import "./panel.css";
 
 interface Props {
@@ -27,9 +29,12 @@ export function AreaPicker({ zones, selectedId, onSelect }: Props) {
 
   return (
     <div className="picker">
-      <label className="field__label" htmlFor="area-select">
-        Choose an area
-      </label>
+      <div className="tiprow">
+        <label className="field__label" htmlFor="area-select">
+          Choose an area
+        </label>
+        <InfoTip label="areas">{AREA_HELP}</InfoTip>
+      </div>
       <select
         id="area-select"
         className="form-control picker__select"
