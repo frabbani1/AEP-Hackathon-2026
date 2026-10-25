@@ -99,12 +99,6 @@
   background-color: #e0f4f5;
 }
 
-.tag--sample {
-  color: var(--aep-text);
-  background-color: var(--aep-orange-tint);
-  border-color: var(--aep-orange);
-}
-
 .risk-badge {
   display: inline-flex;
   align-items: center;
@@ -577,6 +571,50 @@
 
 .whatif__reset {
   margin-top: 14px;
+}
+.whatif__kinds {
+  margin-top: 10px;
+}
+.whatif__kinds summary {
+  padding: 6px 0;
+  font-weight: 600;
+  color: var(--aep-red-heading);
+  cursor: pointer;
+}
+.explanation {
+  margin: 14px 0 0;
+}
+.verdicts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.verdicts__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.verdicts__level {
+  flex: none;
+  min-width: 7.5rem;
+  padding: 1px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: center;
+  text-transform: uppercase;
+  background-color: var(--aep-gray-light);
+  border: 1px solid var(--aep-gray);
+}
+.verdicts__level--supports {
+  color: #2f5600;
+  background-color: #eef6e2;
+}
+.verdicts__level--mixed {
+  background-color: var(--aep-orange-tint);
+  border-color: var(--aep-orange);
 }
 
 .stepper {

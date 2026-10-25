@@ -2,10 +2,12 @@ import { useCallback, useState } from "react";
 import { conciergeClient } from "../api";
 import type { DeclaredNeed, Scenario, SeverityPreset } from "../api";
 import { AreaPicker } from "../components/map/AreaPicker";
+import { EvidenceCard } from "../components/map/EvidenceCard";
 import { MapLegend } from "../components/map/MapLegend";
 import { ScenarioControls } from "../components/map/ScenarioControls";
 import { ZoneMap } from "../components/map/ZoneMap";
 import { ZonePanel } from "../components/map/ZonePanel";
+import { useEvidence } from "../hooks/useEvidence";
 import { useMapZones } from "../hooks/useMapZones";
 import { useZoneAssessment } from "../hooks/useZoneAssessment";
 import { DEFAULT_SCENARIO } from "../lib/scenario";
@@ -23,6 +25,7 @@ export function MapPage() {
 
   const zones = useMapZones(conciergeClient, scenario.severity);
   const assessment = useZoneAssessment(conciergeClient, selectedId, scenario, needs);
+  const evidence = useEvidence(conciergeClient);
 
   const patchScenario = useCallback(
     (patch: Partial<Scenario>) => setScenario((current) => ({ ...current, ...patch })),
@@ -30,7 +33,10 @@ export function MapPage() {
   );
 
   // The damage assumption belongs to one area in one storm, so it starts over when either changes.
-  const clearDamage = () => setScenario((current) => (current.damage === null ? current : { ...current, damage: null }));
+  const clearDamage = () =>
+    setScenario((current) =>
+      current.damage === null && current.damageCount === null ? current : { ...current, damage: null, damageCount: null },
+    );
 
   const selectArea = (id: string) => {
     if (id === selectedId) return;
@@ -38,7 +44,7 @@ export function MapPage() {
     clearDamage();
   };
 
-  const changeSeverity = (severity: SeverityPreset) => patchScenario({ severity, damage: null });
+  const changeSeverity = (severity: SeverityPreset) => patchScenario({ severity, damage: null, damageCount: null });
 
   const resetWhatIf = () =>
     setScenario((current) => ({ ...DEFAULT_SCENARIO, severity: current.severity }));
@@ -54,12 +60,11 @@ export function MapPage() {
           how to prepare, and whether you qualify for alerts. Change the storm or the repair assumptions and watch
           every answer update.
         </p>
-        {zonesReady?.data.source === "sample" && (
-          <p className="sample-banner" role="note">
-            <strong>Sample data.</strong> The areas, risk levels, and estimates on this page are placeholders that
-            show how it will work. They are not real predictions or confirmed utility information.
-          </p>
-        )}
+        <p className="estimate-banner" role="note">
+          <strong>Model estimates, not confirmed information.</strong> Each area is rated through one typical home in
+          it, using damage reports from two past storms. Nothing on this page is a weather forecast or a confirmed
+          utility restoration time.
+        </p>
       </div>
 
       <div className="container map-page__layout">
@@ -132,6 +137,8 @@ export function MapPage() {
               onRetry={assessment.retry}
             />
           </section>
+
+          <EvidenceCard state={evidence} />
         </div>
       </div>
     </main>

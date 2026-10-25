@@ -14,6 +14,9 @@ Routes (POST unless noted; also reachable under /api/ when served through CloudF
   POST /messages     {token, message_type, channel?, severity?, needs?, use_llm?, prior_estimate?}
   POST /assistant    {token, kind, channel?, stage?, severity?, needs?, use_llm?, prior_estimate?, ...}  eight kinds of text
   POST /summary      risk + restoration + guidance + alerts in one call
+  POST /zones            {severity?}                     the outage map's areas with band and confidence
+  POST /zones/assess     {zone_id, severity?, needs?, crews?, access?, damage? | damage_count?, use_llm?}
+                                                         all four answers for one area (no premise token leaves the server)
 """
 from __future__ import annotations
 
@@ -22,14 +25,14 @@ import json
 import logging
 import os
 
-from .service import BadRequest, Concierge
+from .service import BadRequest, Concierge, Unavailable
 
 log = logging.getLogger("concierge.api")
 log.setLevel(logging.INFO)
 
 MAX_BODY_BYTES = 8 * 1024
 ROUTES = {"risk", "restoration", "guidance", "alerts", "messages", "summary", "assistant", "alerts/enroll",
-          "alerts/unenroll", "alerts/simulate"}
+          "alerts/unenroll", "alerts/simulate", "zones", "zones/assess"}
 GET_ROUTES = {"alerts/audit"}
 _service: Concierge | None = None
 
@@ -60,7 +63,7 @@ def _build() -> Concierge:
         alert_store = DynamoStore(boto3.resource("dynamodb").Table(os.environ["ENROLL_TABLE"]))
     return Concierge(store.load_rows(), store.load_calibration(), store.load_labor(), phraser, model_id,
                      alert_store=alert_store, evidence_loader=store.load_evidence, tree=tree,
-                     restoration_engine=engine, assistant=assistant)
+                     restoration_engine=engine, assistant=assistant, zones=store.load_zones())
 
 
 def service() -> Concierge:
@@ -115,6 +118,8 @@ def lambda_handler(event, context=None):
         return _resp(200, service().handle(route, body))
     except BadRequest as e:
         return _error(400, "bad_request", str(e))
+    except Unavailable as e:
+        return _error(503, "unavailable", str(e))
     except Exception:  # noqa: BLE001 - never leak internals; the log has the stack trace
         log.exception("unhandled error on %s", route)
         return _error(500, "internal_error", "Something went wrong. Please try again.")

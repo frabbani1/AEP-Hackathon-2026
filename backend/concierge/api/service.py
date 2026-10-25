@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import OrderedDict
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -25,15 +26,22 @@ from ..risk.confidence import FALLBACK_MESSAGES, downgrade
 from ..risk.engine import RiskEngine
 from ..risk.schema import WhitelistError, _scan_strings
 from ..risk.tokens import TOKEN_RE
+from ..zones import view as zone_view
+from ..zones.index import MIN_HOMES, ZONE_ID_RE, Zone, ZoneIndex
 
 
 log = logging.getLogger("concierge.api")
 
 EVIDENCE_RETRY_SECONDS = 60   # how often a missing backtest report is looked for again
+LAYER_CACHE_SIZE = 16         # map layers kept per storm scenario (a layer is a pure function of the scenario)
 
 
 class BadRequest(ValueError):
     """The caller sent something we won't accept. The message is safe to return."""
+
+
+class Unavailable(RuntimeError):
+    """A published artifact this route needs is not there yet. The message is safe to return."""
 
 
 def _int(v: Any, name: str, lo: int, hi: int) -> int:
@@ -54,8 +62,10 @@ class Concierge:
                  alert_store: AlertStore | None = None, clock: Clock = utc_now,
                  evidence_loader: Callable[[], Mapping | None] | None = None,
                  tree: RestorationTree | None = None, restoration_engine: str | None = None,
-                 assistant: Assistant | None = None):
+                 assistant: Assistant | None = None, zones: ZoneIndex | None = None):
         self.rows, self.labor = rows, labor
+        self.zones = zones
+        self._layers: OrderedDict[Any, dict] = OrderedDict()
         self.assistant = assistant if assistant is not None else Assistant()      # no model unless one is passed in
         self._evidence_loader = evidence_loader
         self._evidence: Mapping | None = None
@@ -357,12 +367,97 @@ class Concierge:
         risk = self.risk(token, severity)
         restoration = self.restoration(token, severity, scenario)
         guidance = self.guidance(risk, restoration, needs)
+        return self._assist_run(kind, risk=risk, restoration=restoration, guidance=guidance, needs=needs,
+                                channel=channel, stage=stage, use_llm=use_llm, prior_display=prior_display, known=known)
+
+    def _assist_run(self, kind: str, *, risk: Mapping, restoration: Mapping, guidance: Mapping, needs: Mapping,
+                    channel: str, stage: str | None, use_llm: bool, prior_display: str | None, known: bool) -> dict:
         est = restoration.get("estimate")
         card = factcard.build(kind=kind, risk=risk, restoration=restoration, channel=channel,
                               has_declared_need=any(needs.values()), prior_display=prior_display, stage=stage)
         typical = None if not est else est.get("p50_hours", est.get("typical_hours"))
         return self.assistant.respond(kind, card=card, guidance=guidance, typical_hours=typical, needs=needs,
                                       use_llm=use_llm, known=known)
+
+    # ---- outage map (zones) -----------------------------------------------------------------------------------
+    def _zone_index(self) -> ZoneIndex:
+        if self.zones is None:
+            raise Unavailable("The map areas have not been published yet.")
+        return self.zones
+
+    def zone_layer(self, body: Mapping) -> dict:
+        """Every zone with its band and confidence for one storm scenario. No premise token leaves this method."""
+        index = self._zone_index()
+        severity = self.severity(body)
+        key = severity if isinstance(severity, str) else float(severity)
+        if key in self._layers:
+            self._layers.move_to_end(key)
+            return self._layers[key]
+        sev = self.engine.resolve_severity(severity)
+        sev_out = {"preset": sev["preset"], "multiplier": round(sev["multiplier"], 2), "extrapolated": sev["extrapolated"]}
+        ratings: dict[str, tuple[str, str] | None] = {}
+        for zone in index:
+            risk = self.risk(zone.rep, severity) if zone.rep else None
+            ok = risk is not None and risk["status"] == "ok"
+            ratings[zone.id] = (risk["band"], risk["confidence"]["level"]) if ok else None
+        out = self._finish(zone_view.layer(
+            [{"id": z.id, "name": z.name, "ring": z.ring} for z in index], ratings, sev_out, index.bounds, MIN_HOMES))
+        self._layers[key] = out
+        if len(self._layers) > LAYER_CACHE_SIZE:
+            self._layers.popitem(last=False)
+        return out
+
+    def _zone(self, body: Mapping) -> Zone:
+        zid = body.get("zone_id")
+        if not isinstance(zid, str) or not ZONE_ID_RE.match(zid):
+            raise BadRequest("zone_id must look like z_ followed by 12 lowercase letters")
+        zone = self._zone_index().get(zid)
+        if zone is None:
+            raise BadRequest("We don't recognize that area.")
+        return zone
+
+    def zone_assess(self, body: Mapping) -> dict:
+        """All four answers for one zone, through its representative premise. The premise token stays on the server and
+        nothing is written to the alerts audit log, because browsing the map is not an alert decision."""
+        zone = self._zone(body)
+        severity, needs, scenario = self.severity(body), self.needs(body), self.scenario(body)
+        use_llm = body.get("use_llm", False)
+        if not isinstance(use_llm, bool):
+            raise BadRequest("use_llm must be true or false")
+        rated = zone.rep is not None
+        token = zone.rep or zone_view.UNRATED_TOKEN
+        risk = self.risk(token, severity)
+        restoration = self.restoration(token, severity, scenario)
+        if not rated:                                    # say why this area has no rating, not "unknown premise"
+            fallback = zone_view.unrated_fallback(zone.fallback)
+            risk, restoration = {**risk, "fallback": fallback}, {**restoration, "fallback": fallback}
+        guidance = self.guidance(risk, restoration, needs)
+        decision = self._decide(token, risk, restoration, needs, {}, None)
+
+        def ask(kind: str, channel: str = "sms") -> dict:
+            return self._assist_run(kind, risk=risk, restoration=restoration, guidance=guidance, needs=needs,
+                                    channel=channel, stage=None, use_llm=use_llm, prior_display=None, known=rated)
+
+        texts = {kind: ask(kind) for kind in ("explanation", "prep_before", "actions_during", "actions_after")}
+        messages = []
+        if rated:
+            texts.update({kind: ask(kind, channel) for kind, _, channel in zone_view.MESSAGE_KINDS})
+            messages = zone_view.messages_view(texts)
+        sev_out = risk["severity"]
+        out = {
+            "source": zone_view.SOURCE, "zone_id": zone.id, "zone_name": zone.name,
+            "status": "ok" if rated and risk["status"] == "ok" else "insufficient_data",
+            "severity": sev_out, "critical_facility_nearby": zone.facility,
+            "confirmed": {"available": False, "note": texts["explanation"]["sections"]["confirmed_note"]},
+            "risk": zone_view.risk_view(risk, texts["explanation"]),
+            "restoration": zone_view.restoration_view(restoration, sev_out),
+            "preparation": zone_view.preparation_view(texts),
+            "alerts": zone_view.alerts_view(decision.response),
+            "messages": messages,
+            "transparency": zone_view.transparency_view(risk, restoration, rated and risk["status"] == "ok"),
+            "fallback": risk.get("fallback"),
+        }
+        return self._finish(out)
 
     def message(self, token: str, severity: Any, body: Mapping, risk: Mapping, restoration: Mapping,
                 needs: Mapping) -> dict:
@@ -397,6 +492,12 @@ class Concierge:
             _only(body, common | {"kind", "channel", "stage", "crews", "access", "damage", "damage_count", "needs",
                                   "use_llm", "prior_estimate"})
             out = self.assist(body)
+        elif route == "zones":
+            _only(body, {"severity"})
+            return self.zone_layer(body)
+        elif route == "zones/assess":
+            _only(body, {"zone_id", "severity", "crews", "access", "damage", "damage_count", "needs", "use_llm"})
+            return self.zone_assess(body)
         elif route == "alerts/enroll":
             _only(body, {"token", "channels", "needs", "message_types"})
             out = self.enroll(body)

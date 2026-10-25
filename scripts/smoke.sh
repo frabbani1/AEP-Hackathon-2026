@@ -49,6 +49,8 @@ post "POST /guidance"         200 "$API/guidance" "$b_tok"
 post "POST /alerts"           200 "$API/alerts" "$b_tok"
 post "POST /messages"         200 "$API/messages" "$b_msg"
 post "POST /summary"          200 "$API/summary" "$b_tok"
+post "POST /zones"            200 "$API/zones" '{}'
+post "unknown zone rejected"  400 "$API/zones/assess" '{"zone_id":"z_aaaaaaaaaaaa"}'
 post "bad token rejected"     400 "$API/risk" '{"token":"nope"}'
 post "unknown field rejected" 400 "$API/risk" "$b_extra"
 post "invalid JSON rejected"  400 "$API/risk" '{bad'
@@ -58,6 +60,7 @@ get  "CloudFront labor json"  200 "$CF/curated/labor_standards.json"
 get  "CloudFront calibration" 200 "$CF/serving/risk/calibration.json"
 get  "premise table private"  403 "$CF/serving/risk/premise_risk.jsonl"
 get  "restoration tree private" 403 "$CF/serving/risk/restoration_tree.json"
+get  "map zones private"     403 "$CF/serving/risk/zones.json"
 get  "parquet tables private" 403 "$CF/curated/tables/premise_dim.parquet"
 get  "ETL reports private"    403 "$CF/_meta/etl_run_latest.json"
 [[ $fail == 0 ]] && echo "smoke OK" || { echo "smoke FAILED" >&2; exit 1; }

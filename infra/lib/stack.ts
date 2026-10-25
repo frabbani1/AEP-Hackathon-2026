@@ -93,7 +93,7 @@ export class ConciergeStack extends cdk.Stack {
     for (const prefix of ["", "/api"]) {
       api.addRoutes({ path: `${prefix}/health`, methods: [apigw.HttpMethod.GET], integration });
       for (const route of ["risk", "restoration", "guidance", "alerts", "messages", "summary", "assistant",
-        "alerts/enroll", "alerts/unenroll", "alerts/simulate"]) {
+        "alerts/enroll", "alerts/unenroll", "alerts/simulate", "zones", "zones/assess"]) {
         api.addRoutes({ path: `${prefix}/${route}`, methods: [apigw.HttpMethod.POST], integration });
       }
       api.addRoutes({ path: `${prefix}/alerts/audit`, methods: [apigw.HttpMethod.GET], integration });

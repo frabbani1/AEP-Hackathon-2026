@@ -1,8 +1,9 @@
 /**
- * Contract between the chat and map UI and the (not yet built) Concierge API.
+ * Contract between the chat and map UI and the Concierge API.
  *
- * Keep the UI talking to `ConciergeClient` only. When the real API exists, add an
- * HTTP implementation next to `mockClient.ts` and swap it in `api/index.ts`.
+ * Keep the UI talking to `ConciergeClient` only. `httpClient.ts` implements the map methods against the real API
+ * (`POST /zones`, `POST /zones/assess`, `GET /evidence`); `mockClient.ts` still stands in for the chat, which has no
+ * backend yet. `api/index.ts` is the single place that picks between them.
  *
  * Privacy: never put street addresses, account numbers, premise IDs or other
  * internal identifiers into these types. Location is a city or ZIP the customer typed.
@@ -50,9 +51,9 @@ export interface AssistantReply {
 /* Outage map                                                                  */
 /*                                                                             */
 /* The map page never computes a number. Every figure and sentence it shows     */
-/* comes from these responses. Risk fields mirror `RESULT_SCHEMA` in           */
-/* `backend/concierge/risk/schema.py`. Restoration, preparation, alerts and    */
-/* messages are proposed shapes for engines that do not exist yet.             */
+/* comes from these responses, which `backend/concierge/zones/view.py` builds   */
+/* from the risk, restoration, assistant and alerts engines. The wire format is */
+/* snake_case; `httpClient.ts` converts it to the camelCase used here.          */
 /*                                                                             */
 /* Privacy: a map "area" is a zone of at least `minHomesPerArea` homes. No      */
 /* address, premise ID, device ID, circuit label, or point coordinate may      */
@@ -94,8 +95,7 @@ export interface MapZonesRequest {
 }
 
 export interface MapZonesResponse {
-  /** "sample" means placeholder content, not a real prediction. */
-  source: "sample" | "live";
+  source: "live";
   severity: SeverityInfo;
   /** Where to frame the map first. */
   bounds: LatLngBounds;
@@ -105,7 +105,7 @@ export interface MapZonesResponse {
 }
 
 export type DamageKind = "pole" | "fuse" | "primary" | "transformer" | "secondary";
-export type AccessCondition = "normal" | "limited";
+export type AccessCondition = "normal" | "restricted" | "remote";
 
 /** What-if inputs that change the restoration estimate. */
 export interface Scenario {
@@ -113,14 +113,17 @@ export interface Scenario {
   /** Crews assigned to this area. */
   crews: number;
   access: AccessCondition;
-  /** Assume main-line damage upstream, so repairs here wait for it. */
-  upstreamDamage: boolean;
-  /** Null means "use the model's own damage assumption for this area and storm". */
+  /**
+   * Total repair jobs to assume, drawn from the mix of past damage. Null means "let the model decide from this area
+   * and storm". Ignored when `damage` is set.
+   */
+  damageCount: number | null;
+  /** Repairs by kind, chosen by the customer. Null means "not chosen". Takes precedence over `damageCount`. */
   damage: Record<DamageKind, number> | null;
 }
 
 /** Needs the customer chose to declare. Never inferred. Used only to tailor advice and alerts. */
-export type DeclaredNeed = "medical-power" | "accessibility" | "critical-facility";
+export type DeclaredNeed = "medical-power" | "accessibility" | "heat-cooling";
 
 export interface ZoneAssessmentRequest {
   zoneId: string;
@@ -138,6 +141,8 @@ export interface RiskFactor {
 
 export interface RiskAssessment {
   band: RiskBand;
+  /** A plain-language paragraph. `origin` says whether a model phrased it or code did. */
+  explanation: { text: string; origin: "template" | "model" } | null;
   /** Plain-language statement of what the rating does and does not describe. */
   scopeNote: string;
   confidence: { level: ConfidenceLevel; records: number; reason: string };
@@ -153,18 +158,32 @@ export interface RestorationFactor {
   text: string;
 }
 
+export interface RestorationStep {
+  stage: "feeder" | "lateral" | "service";
+  label: string;
+  /** Hours by which this stage is done in the likely (P50) outcome. */
+  doneByHours: number;
+}
+
 export interface RestorationEstimate {
   /** Ready-to-display range such as "about 12 to 28 hours". */
   rangeText: string;
-  lowHours: number;
-  highHours: number;
-  /** Damage the estimate assumes, so the what-if controls start from it. */
-  assumedDamage: Record<DamageKind, number>;
+  /** Half of the simulated outcomes finish within this many hours. */
+  p50Hours: number;
+  /** Nine in ten simulated outcomes finish within this many hours. */
+  p90Hours: number;
+  /** One plain sentence saying what the range means. */
+  meaning: string;
+  /** "estimate, not confirmed" */
+  label: string;
+  /** Repair jobs the estimate assumes, so the what-if control starts from it. */
+  damageCount: number | null;
+  damageSource: "simulated" | "you_provided";
   confidence: ConfidenceLevel;
   /** Factors most likely to move the range. */
   movers: RestorationFactor[];
-  /** Explains step restoration when upstream repairs matter. */
-  sequencingNote: string | null;
+  /** How power comes back in stages, nearest the source first. */
+  steps: RestorationStep[];
 }
 
 export interface SafetyNotice {
@@ -182,7 +201,7 @@ export interface PrepAction {
 }
 
 export interface PrepGroup {
-  id: "now" | "before" | "during" | "after";
+  id: "before" | "during" | "after";
   title: string;
   actions: PrepAction[];
 }
@@ -198,8 +217,13 @@ export interface AlertRule {
   met: boolean;
 }
 
+export type AlertLevel = "info" | "standard" | "elevated" | "priority";
+
 export interface AlertEligibility {
   eligible: boolean;
+  /** Prototype alert level. Not a service commitment. */
+  level: AlertLevel;
+  levelReason: string;
   summary: string;
   rules: AlertRule[];
   timing: string;
@@ -232,7 +256,7 @@ export interface ConfirmedInfo {
 }
 
 export interface ZoneAssessment {
-  source: "sample" | "live";
+  source: "live";
   zoneId: string;
   zoneName: string;
   status: "ok" | "insufficient_data";
@@ -253,9 +277,26 @@ export interface ZoneAssessment {
   fallback: { reasonCode: string; message: string } | null;
 }
 
+/** Aggregate backtest results from `GET /evidence`. Two past storms, circuit level, no identifiers. */
+export interface EvidenceVerdict {
+  code: string;
+  level: "supports" | "mixed" | "does_not_support" | "not_testable";
+  sentence: string;
+}
+
+export interface Evidence {
+  /** "unavailable" until a reviewed backtest report is published. */
+  status: "ok" | "unavailable";
+  note: string;
+  label: string | null;
+  verdicts: EvidenceVerdict[];
+  limits: string[];
+}
+
 export interface ConciergeClient {
   getEventSummary(location: string | null, signal?: AbortSignal): Promise<EventSummary>;
   ask(request: AskRequest, signal?: AbortSignal): Promise<AssistantReply>;
   getMapZones(request: MapZonesRequest, signal?: AbortSignal): Promise<MapZonesResponse>;
   getZoneAssessment(request: ZoneAssessmentRequest, signal?: AbortSignal): Promise<ZoneAssessment>;
+  getEvidence(signal?: AbortSignal): Promise<Evidence>;
 }

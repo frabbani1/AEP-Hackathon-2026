@@ -1,21 +1,17 @@
-import { sampleAssessment, sampleMapZones } from "./sample/assessment";
 import type { AskRequest, AssistantReply, ConciergeClient, EventSummary } from "./types";
 
 /**
- * Stand-in for the Concierge API, which is not built yet.
+ * Stand-in for the chat half of the Concierge API, which has no backend yet.
  *
  * The chat methods return static, number-free placeholder content. They deliberately
- * do NOT invent risk levels, restoration times or alert eligibility.
+ * do NOT invent risk levels, restoration times or alert eligibility. The map is live:
+ * see `httpClient.ts`.
  *
- * The map methods are the exception: the map page needs something to color and
- * recompute, so they return clearly labeled `source: "sample"` data from
- * `./sample/assessment`. That data is placeholder only and must never be shown as a
- * real prediction. The real numbers must come from the deterministic engine.
+ * Why the chat is not wired: a typed city or ZIP cannot be turned into an area, because
+ * nothing in the data maps either to a map zone, and the engines take only opaque ids.
  */
 
 const LATENCY_MS = 600;
-const MAP_LATENCY_MS = 350;
-const ASSESSMENT_LATENCY_MS = 450;
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -35,7 +31,7 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-export const mockClient: ConciergeClient = {
+export const mockClient: Pick<ConciergeClient, "getEventSummary" | "ask"> = {
   async getEventSummary(location, signal): Promise<EventSummary> {
     await wait(250, signal);
     const headline = location
@@ -73,18 +69,6 @@ export const mockClient: ConciergeClient = {
     };
   },
 
-  async getMapZones({ severity }, signal) {
-    await wait(MAP_LATENCY_MS, signal);
-    return sampleMapZones(severity);
-  },
-
-  async getZoneAssessment(request, signal) {
-    await wait(ASSESSMENT_LATENCY_MS, signal);
-    const assessment = sampleAssessment(request);
-    if (!assessment) throw new Error("Unknown area");
-    return assessment;
-  },
-
   async ask({ location }: AskRequest, signal): Promise<AssistantReply> {
     await wait(LATENCY_MS, signal);
 
@@ -93,7 +77,7 @@ export const mockClient: ConciergeClient = {
         isPreview: true,
         content:
           "I can help with that. First, tell me the city or ZIP code you want to look at using the location box above.\n\n" +
-          "You never need to share your street address or account number.",
+          "You never need to share your street address or account number. The Outage map page already shows live model answers by area.",
       };
     }
 
@@ -101,8 +85,8 @@ export const mockClient: ConciergeClient = {
       isPreview: true,
       content:
         `Thanks. I am scoped to ${location}.\n\n` +
-        "This preview is not connected to the outage risk engine yet, so I can't tell you how likely an outage is or how long restoration could take. " +
-        "Once it is connected, I will show a risk level with how confident the model is, a restoration time range, steps to prepare, and whether you qualify for alerts.\n\n" +
+        "This chat is not connected to the outage risk engine yet, so I can't tell you how likely an outage is or how long restoration could take. " +
+        "For real model answers, open the Outage map page: pick an area and you will see a risk level with how confident the model is, a restoration time range, steps to prepare, and whether you qualify for alerts.\n\n" +
         "If you see a downed power line, stay far away and call 911.",
     };
   },

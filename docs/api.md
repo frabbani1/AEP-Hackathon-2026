@@ -24,6 +24,8 @@ Errors look like `{"error": {"code": "bad_request", "message": "..."}}`.
 | `GET /evidence` | none | backtest headline numbers, rule-generated verdicts (`supports`, `mixed`, `does_not_support`, `not_testable`), plot locations, and the six-item limits list. `status` is `unavailable` until a reviewed `backtest.json` is uploaded. Aggregates only, no identifiers |
 | `POST /messages` | `token`, `message_type`, `channel?`, `severity?`, `needs?`, `use_llm?`, `prior_estimate?` | one customer message and how it was produced |
 | `POST /assistant` | `token`, `kind`, `channel?`, `stage?`, `severity?`, `needs?`, `use_llm?`, `prior_estimate?`, plus restoration inputs | one of eight kinds of plain-language text, with separate sections for confirmed facts, model estimates and customer actions, and its provenance (see "Assistant") |
+| `POST /zones` | `severity?` | the outage map: every area's outline, risk band and confidence for one storm scenario, and the smallest group of homes an area may cover. `503` until `zones.json` is published |
+| `POST /zones/assess` | `zone_id`, `severity?`, `needs?`, `crews?`, `access?`, `damage?` or `damage_count?`, `use_llm?` (default `false`) | all four answers for one area in the shape the map shows: risk, restoration (P50 to P90, steps, what moves it), preparation, alert level and eligibility, four sample messages, assumptions. See "Outage map" |
 | `POST /summary` | same as `/alerts` | risk + restoration + guidance + alerts in one call (one premise-table read, plus one alerts-table read for the sign-up) |
 
 Inputs
@@ -132,6 +134,35 @@ Response:
 - A well-formed token that is not in the premise table gets the insufficient-data fallback and no model call.
 - Logs hold the kind, source, guard reasons, cache hit and latency only. They never hold the token, a draft or the final text.
 
+## Outage map (`POST /zones`, `POST /zones/assess`)
+
+The map shows areas, the engines take premise tokens. `zones.json` (built by `concierge/curate/zones.py`, published to
+`serving/risk/`, never served to a browser) links the two.
+
+- A **zone** is an H3 cell at resolution 6 (about 36 km2) holding at least 10 premises. Every published premise cell has one
+  resolution-6 ancestor, so zones are coarser than the premise cells. The zone id is `z_` plus 12 letters (an HMAC of the cell
+  under the token salt) and is not a location. Names are `Area 1`, `Area 2`, and so on, north to south.
+- A zone is **rated through one representative premise**: the one whose typical-storm risk score is the middle one among the
+  zone's rated premises (ties broken by token). Its answers describe a typical home in the area, not the whole area. The
+  response says so in `transparency.assumptions`. A zone with no rated premise returns `status: insufficient_data`, no
+  risk or restoration, and the most common fallback reason among its premises.
+- The representative token never leaves the server. `/zones/assess` writes **nothing** to the alerts audit log, because browsing
+  the map is not an alert decision, and the sign-up store is not read.
+- `/zones` is cached per storm scenario (a layer depends on nothing else). `/zones/assess` runs the risk, restoration, alerts and
+  assistant code once per call. With `use_llm` false (the default) all text comes from the code-built templates and the call
+  makes no Bedrock request. With `use_llm` true it makes up to eight sequential assistant calls (each may use the draft cache),
+  so expect it to be slower.
+- `/zones/assess` response keys (snake_case): `source` (`live`), `zone_id`, `zone_name`, `status`, `severity`,
+  `critical_facility_nearby`, `confirmed`, `risk`, `restoration`, `preparation`, `alerts`, `messages`, `transparency`,
+  `fallback`. `risk.explanation` and each message carry `origin` (`model` or `template`). Preparation comes from the assistant's
+  item libraries (`prep_before`, `actions_during`, `actions_after`): safety notices first, then three groups, with items added
+  for declared needs marked `tailored_for`. `restoration.steps` are the engine's `steps`, and `restoration.movers` list the
+  engine's `sensitivity` changes that move the likely time (a change that leaves P50 unchanged is left out).
+- Needs: the map offers `medical_equipment`, `mobility_limited` and `electric_heat_or_cooling`, the same three the engines know.
+- Build: `scripts/build_risk_artifacts.py` and `scripts/etl.py` write `zones.json` when the clean tables include `hex_context`.
+  Run `make etl` and upload before the map routes work in the cloud. Locally, `scripts/dev_api.py` serves the handler on
+  127.0.0.1:8787 and the Vite dev server proxies `/api` to it.
+
 ## Demo-only sign-up, mock delivery and audit
 
 - **Nothing is ever sent.** There is no SMS, voice, push or email integration, and the Lambda role has no permission to
@@ -148,7 +179,8 @@ Response:
 
 ## What is never returned
 
-Raw premise numbers, addresses, coordinates, circuit or device identifiers, life-support flags, and the exposure
+Raw premise numbers, addresses, coordinates, circuit or device identifiers, life-support flags, the zone-to-premise map
+(`zones.json`; a zone response carries the zone id and outline only), and the exposure
 weights and tree position the restoration model uses (`cn`, `n0`, `nl`, `nf`, `pc`, `pn`, `ap`, and everything in
 `restoration_tree.json`). Responses are scanned for identifier-like text before
 they leave the Lambda.
@@ -160,6 +192,8 @@ they leave the Lambda.
   sections of the matching type, because section length is not in the data. Crews are modeled as one pool working down
   a priority list, which ignores the limit that two crews cannot work the same job, so short outages may be
   underestimated. No assessment or mobilization delay is included: the clock starts when crews start.
+- A map area is rated through one typical home in it. Lines differ inside a 36 km2 area, and some of the text the engines write
+  says "your line" or "your home" because it was written for one premise.
 - Premises on very small lines, or with no damage history, return `status: insufficient_data` with a plain-language
   fallback instead of a number.
 - No weather data, live crew locations or road conditions are used.

@@ -3,7 +3,8 @@
 Cloud: premise rows from DynamoDB (one GetItem per request), calibration.json and labor_standards.json from the clean
 bucket's serving/ and curated/ prefixes. Local: set PREMISE_FILE, CALIBRATION_FILE and LABOR_FILE to read the files in
 data/ instead, so the whole API can be exercised without AWS. The restoration tree (serving/risk/restoration_tree.json,
-TREE_FILE locally) is only read when the v2 restoration engine is on.
+TREE_FILE locally) is only read when the v2 restoration engine is on. The map zones (serving/risk/zones.json,
+ZONES_FILE locally) are always read; the file holds premise tokens and is never served to a browser.
 """
 from __future__ import annotations
 
@@ -94,6 +95,23 @@ def load_evidence() -> dict | None:
         if e.response.get("Error", {}).get("Code") in ("NoSuchKey", "AccessDenied"):
             return None
         raise
+
+
+def load_zones():
+    """The outage map's zones, or None when zones.json has not been published (the map routes then answer 503).
+    A ZONES_FILE that does not exist is an error, not a silent fallback."""
+    from ..zones.index import ZoneIndex
+    if os.environ.get("ZONES_FILE"):
+        return ZoneIndex.from_dict(json.loads(Path(os.environ["ZONES_FILE"]).read_text()))
+    from botocore.exceptions import ClientError
+    try:
+        doc = _s3_json("serving/risk/zones.json")
+    except ClientError as e:
+        if e.response.get("Error", {}).get("Code") not in ("NoSuchKey", "AccessDenied"):
+            raise
+        logging.getLogger("concierge.api").warning("zones.json not found; the map routes are unavailable")
+        return None
+    return ZoneIndex.from_dict(doc)
 
 
 def load_labor() -> dict:

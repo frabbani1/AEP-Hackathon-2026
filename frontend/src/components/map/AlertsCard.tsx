@@ -11,6 +11,9 @@ export function AlertsCard({ alerts }: { alerts: AlertEligibility }) {
         <strong>{alerts.eligible ? "Yes, you qualify" : "Not triggered right now"}</strong>
       </p>
       <p>{alerts.summary}</p>
+      <p className="card__muted">
+        Prototype alert level: <strong>{alerts.level}</strong>. {alerts.levelReason}
+      </p>
 
       <h4 className="card__subhead">The rules we checked</h4>
       <ul className="rules">

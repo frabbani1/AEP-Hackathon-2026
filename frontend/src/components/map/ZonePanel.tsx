@@ -97,7 +97,6 @@ export function ZonePanel({
 
       <div className="zone-panel__head">
         <h2 className="zone-panel__title">{data.zoneName}</h2>
-        {data.source === "sample" && <Tag kind="sample" />}
         {refreshing && (
           <span className="zone-panel__updating" aria-hidden="true">
             Updating&hellip;

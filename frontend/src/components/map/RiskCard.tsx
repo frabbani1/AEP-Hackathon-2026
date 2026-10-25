@@ -34,6 +34,17 @@ export function RiskCard({ risk, severity }: { risk: RiskAssessment; severity: S
         {severity.extrapolated && " Confidence is lowered because this storm is stronger than any in our records."}
       </p>
 
+      {risk.explanation && (
+        <>
+          <h4 className="card__subhead">In plain words</h4>
+          <p className="explanation">{risk.explanation.text}</p>
+          <p className="card__muted">
+            {risk.explanation.origin === "model"
+              ? "Written by an AI assistant using only numbers from the model."
+              : "Fixed wording with numbers filled in from the model."}
+          </p>
+        </>
+      )}
       <h4 className="card__subhead">Why we say this</h4>
       <ul className="factors">
         {risk.topFactors.map((factor) => (

@@ -24,16 +24,26 @@ export const SEVERITY_STEPS: ReadonlyArray<{ id: SeverityPreset; label: string; 
 ];
 
 export const CREWS_MIN = 1;
-export const CREWS_MAX = 8;
+export const CREWS_MAX = 20;
+/** The API takes 1 to 20 of each kind of damage and 1 to 400 repairs in total; the controls stop well short of that. */
 export const DAMAGE_MAX = 20;
+export const DAMAGE_COUNT_MIN = 1;
+export const DAMAGE_COUNT_MAX = 60;
 
+/** Crews match the API's own default, so the first answer is the model's unmodified one. */
 export const DEFAULT_SCENARIO: Scenario = {
   severity: "typical",
-  crews: 2,
+  crews: 3,
   access: "normal",
-  upstreamDamage: false,
+  damageCount: null,
   damage: null,
 };
+
+export const ACCESS_OPTIONS: ReadonlyArray<{ value: Scenario["access"]; label: string }> = [
+  { value: "normal", label: "Normal" },
+  { value: "restricted", label: "Restricted (blocked roads, hard-to-reach equipment)" },
+  { value: "remote", label: "Remote location (far from roads, slow to reach)" },
+];
 
 /** Plain-language names for the damage the what-if controls assume. */
 export const DAMAGE_LABELS: Record<DamageKind, string> = {
@@ -47,12 +57,12 @@ export const DAMAGE_ORDER: readonly DamageKind[] = ["pole", "primary", "fuse", "
 
 export const DECLARED_NEEDS: ReadonlyArray<{ id: DeclaredNeed; label: string }> = [
   { id: "medical-power", label: "Someone here relies on medical equipment that needs power" },
-  { id: "accessibility", label: "Someone here needs accessibility support during an outage" },
-  { id: "critical-facility", label: "This is a critical facility, such as a clinic, school, or water plant" },
+  { id: "accessibility", label: "Someone here has limited mobility and needs support during an outage" },
+  { id: "heat-cooling", label: "Someone here depends on electric heating or cooling" },
 ];
 
 export const NEED_LABEL: Record<DeclaredNeed, string> = {
   "medical-power": "Medical equipment",
-  accessibility: "Accessibility",
-  "critical-facility": "Critical facility",
+  accessibility: "Mobility",
+  "heat-cooling": "Heating or cooling",
 };
