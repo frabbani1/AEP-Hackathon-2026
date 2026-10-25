@@ -1,6 +1,8 @@
 import type { AlertEligibility } from "../../api";
+import { ALERT_LEVEL_HELP, ALERT_RULES_HELP } from "../../lib/explain";
+import { InfoTip } from "../InfoTip";
 import { CheckIcon, InfoIcon } from "../icons";
-import { Card, Tag } from "./Card";
+import { Card, SubHead, Tag } from "./Card";
 
 /** "Do I qualify for outage alerts?" The rules that fired, plus timing, channels and escalation. */
 export function AlertsCard({ alerts }: { alerts: AlertEligibility }) {
@@ -13,9 +15,10 @@ export function AlertsCard({ alerts }: { alerts: AlertEligibility }) {
       <p>{alerts.summary}</p>
       <p className="card__muted">
         Prototype alert level: <strong>{alerts.level}</strong>. {alerts.levelReason}
+        <InfoTip label="alert level">{ALERT_LEVEL_HELP}</InfoTip>
       </p>
 
-      <h4 className="card__subhead">The rules we checked</h4>
+      <SubHead info={ALERT_RULES_HELP}>The rules we checked</SubHead>
       <ul className="rules">
         {alerts.rules.map((rule) => (
           <li key={rule.id} className={rule.met ? "rules__item is-met" : "rules__item"}>

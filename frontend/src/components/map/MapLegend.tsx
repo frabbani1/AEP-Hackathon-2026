@@ -1,3 +1,5 @@
+import { LEGEND_HELP } from "../../lib/explain";
+import { InfoTip } from "../InfoTip";
 import { RiskBadge } from "./Card";
 import { PredictionTag } from "./OutlookCard";
 import "./panel.css";
@@ -6,7 +8,10 @@ import "./panel.css";
 export function MapLegend({ minHomesPerArea }: { minHomesPerArea: number }) {
   return (
     <div className="legend">
-      <p className="legend__title">Risk in this storm scenario</p>
+      <div className="tiprow">
+        <p className="legend__title">Risk in this storm scenario</p>
+        <InfoTip label="the map colors">{LEGEND_HELP}</InfoTip>
+      </div>
       <ul className="legend__list">
         <li>
           <RiskBadge band="Low" size="sm" />

@@ -1,6 +1,8 @@
 import { useRef, type ChangeEvent } from "react";
 import type { ScenarioPreset, SeverityPreset, WeatherSummary } from "../../api";
+import { STORM_STRENGTH_HELP } from "../../lib/explain";
 import { SEVERITY_STEPS } from "../../lib/scenario";
+import { InfoTip } from "../InfoTip";
 import { CloudIcon } from "../icons";
 import "./panel.css";
 
@@ -97,8 +99,14 @@ export function ScenarioControls({ severity, updating, weather, onChange }: Prop
 
   return (
     <div className="scenario">
+      <div className="tiprow">
+        <span className="field__label" aria-hidden="true">
+          Storm strength
+        </span>
+        <InfoTip label="storm strength">{STORM_STRENGTH_HELP}</InfoTip>
+      </div>
       <fieldset className="mode">
-        <legend className="field__label">Storm strength</legend>
+        <legend className="sr-only">Storm strength</legend>
         <div className="mode__options">
           <label className={`mode__option${isWeather ? " is-selected" : ""}`}>
             <input

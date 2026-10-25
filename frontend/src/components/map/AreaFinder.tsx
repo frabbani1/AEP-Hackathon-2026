@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import type { ConciergeClient, WeatherOutlook } from "../../api";
 import { ApiError } from "../../api/httpClient";
+import { FIND_AREA_HELP } from "../../lib/explain";
 import { parseLocation } from "../../lib/parseLocation";
+import { InfoTip } from "../InfoTip";
 import "./panel.css";
 
 interface Props {
@@ -81,9 +83,12 @@ export function AreaFinder({ client, onFound, onOutlook }: Props) {
 
   return (
     <form className="finder" onSubmit={handleSubmit} noValidate>
-      <label className="field__label" htmlFor="area-finder">
-        Find your area by city or ZIP code
-      </label>
+      <div className="tiprow">
+        <label className="field__label" htmlFor="area-finder">
+          Find your area by city or ZIP code
+        </label>
+        <InfoTip label="finding your area">{FIND_AREA_HELP}</InfoTip>
+      </div>
       <div className="finder__row">
         <input
           id="area-finder"

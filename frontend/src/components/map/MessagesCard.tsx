@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { MessageStage, ProactiveMessage } from "../../api";
+import { MESSAGES_HELP } from "../../lib/explain";
 import { Card } from "./Card";
 
 const STAGE_LABEL: Record<MessageStage, string> = {
@@ -16,7 +17,7 @@ export function MessagesCard({ messages }: { messages: ProactiveMessage[] }) {
   if (!current) return null;
 
   return (
-    <Card id="messages" title="Messages we would send">
+    <Card id="messages" title="Messages we would send" info={MESSAGES_HELP}>
       <fieldset className="segmented">
         <legend className="sr-only">Message stage</legend>
         {messages.map((message) => (

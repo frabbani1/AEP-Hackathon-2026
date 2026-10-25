@@ -1,4 +1,5 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
+import { InfoTip } from "../InfoTip";
 import { MinusIcon, PlusIcon } from "../icons";
 import "./panel.css";
 
@@ -10,17 +11,22 @@ interface Props {
   onChange: (value: number) => void;
   /** Singular noun used in the button names, such as "crew". */
   unit?: string;
+  /** Plain-language help shown in a circled "i" beside the label. */
+  info?: ReactNode;
 }
 
 /** A plus/minus counter with real buttons, large touch targets, and a labelled value. */
-export function Stepper({ label, value, min, max, onChange, unit }: Props) {
+export function Stepper({ label, value, min, max, onChange, unit, info }: Props) {
   const labelId = useId();
   const noun = unit ?? label.toLowerCase();
 
   return (
     <div className="stepper" role="group" aria-labelledby={labelId}>
-      <span id={labelId} className="stepper__label">
-        {label}
+      <span className="stepper__name">
+        <span id={labelId} className="stepper__label">
+          {label}
+        </span>
+        {info && <InfoTip label={label.toLowerCase()}>{info}</InfoTip>}
       </span>
       <span className="stepper__controls">
         <button

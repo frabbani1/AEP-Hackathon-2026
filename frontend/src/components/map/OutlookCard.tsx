@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { WeatherOutlook } from "../../api";
+import { OUTLOOK_LEVEL_HELP, TAG_HELP, WEATHER_GUST_HELP } from "../../lib/explain";
+import { InfoTip } from "../InfoTip";
 import { InfoIcon, WarningIcon } from "../icons";
 import "./panel.css";
 
@@ -7,8 +9,20 @@ const num = (value: number | null | undefined, unit: string) =>
   value === null || value === undefined ? "n/a" : `${Math.round(value)}${unit}`;
 
 /** Purple label that goes wherever a forecast-only prediction appears, so it is never mistaken for outage data. */
-export function PredictionTag({ children = "Prediction only \u00b7 no outage data" }: { children?: string }) {
-  return <span className="tag tag--forecast">{children}</span>;
+export function PredictionTag({
+  children = "Prediction only \u00b7 no outage data",
+  help = TAG_HELP.forecast,
+}: {
+  children?: string;
+  /** What the "i" says. Defaults to the explanation of a forecast-only prediction. */
+  help?: string;
+}) {
+  return (
+    <span className="tagwrap">
+      <span className="tag tag--forecast">{children}</span>
+      <InfoTip label={children.toLowerCase()}>{help}</InfoTip>
+    </span>
+  );
 }
 
 /** Four-step meter in words and bars, so the level is never shown by color alone. */
@@ -21,6 +35,7 @@ function LevelBadge({ outlook }: { outlook: WeatherOutlook["outlook"] }) {
         ))}
       </span>
       <span>Weather level: {outlook.label}</span>
+      <InfoTip label="weather level">{OUTLOOK_LEVEL_HELP}</InfoTip>
     </span>
   );
 }
@@ -88,7 +103,10 @@ export function OutlookCard({ outlook, onClose }: { outlook: WeatherOutlook; onC
             </div>
           )}
           <div className="weather-grid__item">
-            <div className="weather-grid__label">Peak gust, next 48 hours</div>
+            <div className="weather-grid__label">
+              Peak gust, next 48 hours
+              <InfoTip label="peak gust">{WEATHER_GUST_HELP}</InfoTip>
+            </div>
             <div className="weather-grid__value">{num(level.peakGustMph, " mph")}</div>
           </div>
           {weather.ahead48h && (
@@ -128,7 +146,9 @@ export function OutlookCard({ outlook, onClose }: { outlook: WeatherOutlook; onC
           <h3 id="outlook-prepare" className="card__title">
             How to get ready
           </h3>
-          <PredictionTag>General advice</PredictionTag>
+          <PredictionTag help="Common-sense steps for any storm. They aren't based on outage records for this place.">
+            General advice
+          </PredictionTag>
         </div>
         <ul className="safety">
           {preparation.safety.map((notice) => (

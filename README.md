@@ -9,6 +9,8 @@ An AI-powered assistant that helps customers understand storm-related outage ris
 
 The challenge text is in `docs/challenge.md`.
 
+**Status:** code complete for the hackathon submission. The chat page, outage map, risk and restoration engines, alerts, assistant and weather are all built and run end to end on the real data. Two items are deliberately left out and listed in section 8 as unchecked: alert sign-up and audit screens in the web app (the API exists), and a real-data storm summary on the chat page (it shows labeled sample data).
+
 ---
 
 ## 1. Problem
@@ -33,6 +35,7 @@ A customer types a city or ZIP code, or picks an area on a map. Areas are groups
 5. **Proactive messages** for four stages (pre-storm, outage confirmed, estimate updated, restoration complete).
 6. **Transparency panel:** confirmed facts vs. model estimates vs. customer actions, plus assumptions, missing data, and a fallback when the model cannot rate an area.
 7. **Evidence card:** how the model did on a backtest of two past storms, including where it did not beat a simple baseline.
+8. **Plain-language help:** a circled "i" beside every term or number a customer might not know (risk band, confidence, restoration range, storm strength, peak gust, alert level, source labels and more). It opens on hover, keyboard focus or tap, and explains what the item is or how it is worked out. The wording lives in `frontend/src/lib/explain.ts`.
 
 ## 3. Customer Journey
 
@@ -65,6 +68,8 @@ A customer types a city or ZIP code, or picks an area on a map. Areas are groups
 
 **Design principle:** the LLM never invents numbers. Deterministic Python computes every number. The model only phrases text from a whitelisted fact card, and if its output contains a number that is not in the card, the template text is used instead.
 
+A diagram and a longer walkthrough are in `docs/architecture.md` (`docs/architecture.svg`).
+
 The deployed shape (CDK in `infra/`) is S3 + CloudFront for the web app, an API Gateway HTTP API in front of a Python 3.12 Lambda, DynamoDB for the risk table and demo alert sign-ups, and Bedrock for optional phrasing.
 
 ## 5. Data
@@ -93,7 +98,9 @@ Raw data is never modified. Derived output goes to `artifacts/` (gitignored exce
 No weather data is provided with the challenge, so severity is a **scenario input** by default: `sep-2024-like`, `typical`, `feb-2025-like`, `beyond-observed`, or a number from 0.25 to 3.0, calibrated from the two storms in the damage data. The map can also take severity from real weather (Open-Meteo wind gusts), live or replayed for a past date; see `docs/api.md`, "Weather".
 
 ### 6.2 Outage risk model
-- A transparent score per premise built from damage history, asset and service type, position on the line and storm severity (`backend/concierge/risk/`). Band cut points come from the two storms in the data (`artifacts/risk/calibration.json`). The `top factors` come from the score's own terms. The backtest calibrates on Sep 2024 and tests on Feb 2025.
+- Not a trained classifier. It is a transparent score, `S = R_eff x T x E x m` (`backend/concierge/risk/`): the circuit's historical damage rate (reports per 1,000 premises per storm), adjusted for service type `T` (overhead 1.0, underground 0.4), exposure `E` (1 + 0.10 per protective device upstream + 0.05 per hop to the breaker) and the storm multiplier `m`. `T` and `E` are stated assumptions, not fitted values.
+- Band cut points are the 50th and 85th percentiles of the baseline scores across all premises, so Low is roughly the bottom half, Medium the next 35% and High the top 15% (`artifacts/risk/calibration.json`). The `top factors` come from the score's own terms.
+- The label in the code says what it is: "circuit-level historical susceptibility, not a per-premise forecast". It gives a band, not a probability. The backtest calibrates on Sep 2024 and tests on Feb 2025.
 - Each map area is rated through one typical home in it (the median-risk premise). Other homes in the area can differ, and the app says so.
 - Output: risk band + confidence (based on the number of damage records behind the rating). When data is thin the engine returns a fallback instead of a band.
 
@@ -128,7 +135,7 @@ Fuse banks and other protective devices define protection zones in the restorati
 - **Privacy:** salted opaque tokens only. Map areas cover at least 10 homes. No addresses, raw premise numbers, meter or device ids, circuit labels, or facility names and locations leave the server. The city or ZIP a person types is matched against public tables and dropped, and street addresses are rejected. Declared needs are used for that request only.
 - **Safety:** hard-coded safety messages (downed lines, generator carbon monoxide, 911 and the utility emergency line) that the LLM cannot override. A check raises if a required string is missing.
 - **Fallback:** when the model cannot rate an area, the app says so and tells the customer to prepare as if an outage is possible.
-- **Accessibility:** native controls with labels, live regions on value changes, large touch targets and screen-reader text. Full validation would need manual testing with assistive technologies.
+- **Accessibility:** native controls with labels, live regions on value changes, large touch targets and screen-reader text. The "i" help bubbles work with mouse, keyboard (focus opens, Escape closes), touch and screen readers, and never carry color alone. Full validation would need manual testing with assistive technologies.
 - **Controls:** input validation (unknown fields rejected, 8 KB body limit), confidence thresholds, an output guard on every model draft, a circuit breaker on the model, and an audit log of alert decisions.
 - **Demo only:** alert sign-ups accept fictional contacts only and nothing is ever sent. The API has **no authentication**; do not expose it beyond a demo.
 
@@ -144,6 +151,7 @@ Fuse banks and other protective devices define protection zones in the restorati
 - [x] Fallback mode (unrated areas, places outside the data)
 - [x] Audit log of alert decisions (API: `GET /alerts/audit`)
 - [x] Backtest and evidence card (`docs/backtest.md`, `GET /evidence`)
+- [x] Plain-language "i" help bubbles on confusing terms and metrics (chat page and map)
 - [ ] Alert sign-up and audit log screens in the web app (API only today)
 - [ ] Chat page storm summary on real data (still a sample)
 
@@ -199,7 +207,7 @@ AWS (needs credentials and review; see `docs/aws-setup.md`): `make ingest etl va
 ## 11. Demo Script (for judges)
 
 1. Type "Salem" or a Roanoke Valley ZIP, or click an area on the map -> show risk band, confidence, top factors.
-2. Move the storm-strength slider -> the band and range update.
+2. Move the storm-strength slider -> the band and range update. Hover the circled "i" beside Confidence, the restoration range or Storm strength to show the plain-language explanations.
 3. Change crews available, or the number of repair jobs -> the restoration range updates.
 4. Show preparation guidance and tick a declared need; show alert eligibility and the rules that fired.
 5. Show the four stage messages (pre-storm, outage confirmed, estimate updated, restored).

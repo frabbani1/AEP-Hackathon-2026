@@ -1,5 +1,6 @@
 import type { EvidenceVerdict } from "../../api";
 import type { EvidenceState } from "../../hooks/useEvidence";
+import { EVIDENCE_HELP } from "../../lib/explain";
 import { Card, Tag } from "./Card";
 
 const LEVEL_LABEL: Record<EvidenceVerdict["level"], string> = {
@@ -14,14 +15,14 @@ export function EvidenceCard({ state }: { state: EvidenceState }) {
   if (state.status === "loading") return null;
   if (state.status === "error") {
     return (
-      <Card id="evidence" title="How well has this held up?">
+      <Card id="evidence" title="How well has this held up?" info={EVIDENCE_HELP}>
         <p className="card__muted">We couldn&rsquo;t load the backtest results just now.</p>
       </Card>
     );
   }
   const { data } = state;
   return (
-    <Card id="evidence" title="How well has this held up?" tag={<Tag kind="model" />}>
+    <Card id="evidence" title="How well has this held up?" info={EVIDENCE_HELP} tag={<Tag kind="model" />}>
       {data.status === "ok" ? (
         <>
           {data.label && <p>{data.label}</p>}

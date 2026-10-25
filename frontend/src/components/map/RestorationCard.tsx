@@ -10,8 +10,18 @@ import {
   DAMAGE_ORDER,
   DEFAULT_SCENARIO,
 } from "../../lib/scenario";
+import {
+  ACCESS_HELP,
+  CREWS_HELP,
+  MOVERS_HELP,
+  REPAIRS_HELP,
+  RESTORATION_HELP,
+  STEPS_HELP,
+  WHATIF_HELP,
+} from "../../lib/explain";
+import { InfoTip } from "../InfoTip";
 import { ArrowDownIcon, ArrowUpIcon, InfoIcon } from "../icons";
-import { Card, Tag } from "./Card";
+import { Card, SubHead, Tag } from "./Card";
 import { Stepper } from "./Stepper";
 
 /** Hours at the right edge of the range bar. Longer ranges run off the end. */
@@ -80,7 +90,12 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
     onScenarioChange({ damage: any ? next : null });
   };
   return (
-    <Card id="restoration" title="How long could restoration take?" tag={<Tag kind="model" />}>
+    <Card
+      id="restoration"
+      title="How long could restoration take?"
+      info={RESTORATION_HELP}
+      tag={<Tag kind="model" />}
+    >
       <p className="card__lead">If an outage happens here, power could take</p>
       <p className="range__text">{restoration.rangeText}</p>
       <RangeBar low={restoration.p50Hours} high={restoration.p90Hours} />
@@ -91,7 +106,7 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
 
       {restoration.steps.length > 0 && (
         <>
-          <h4 className="card__subhead">How power comes back</h4>
+          <SubHead info={STEPS_HELP}>How power comes back</SubHead>
           <ol className="plain">
             {restoration.steps.map((step) => (
               <li key={step.stage}>
@@ -102,7 +117,7 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
         </>
       )}
 
-      <h4 className="card__subhead">What could move it</h4>
+      <SubHead info={MOVERS_HELP}>What could move it</SubHead>
       <ul className="factors">
         {restoration.movers.map((mover) => (
           <li key={mover.id} className={`factors__item factors__item--${mover.direction}`}>
@@ -127,11 +142,15 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
 
       <fieldset className="whatif">
         <legend className="whatif__legend">Try a what-if</legend>
-        <p className="field__hint">Change anything below and the estimate updates.</p>
+        <p className="field__hint">
+          Change anything below and the estimate updates.
+          <InfoTip label="what-ifs">{WHATIF_HELP}</InfoTip>
+        </p>
 
         <Stepper
           label="Crews working on this area"
           unit="crews"
+          info={CREWS_HELP}
           value={scenario.crews}
           min={CREWS_MIN}
           max={CREWS_MAX}
@@ -139,7 +158,13 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
         />
 
         <fieldset className="choice">
-          <legend className="choice__legend">Access to the damage</legend>
+          <legend className="sr-only">Access to the damage</legend>
+          <div className="tiprow">
+            <span className="choice__legend" aria-hidden="true">
+              Access to the damage
+            </span>
+            <InfoTip label="access to the damage">{ACCESS_HELP}</InfoTip>
+          </div>
           {ACCESS_OPTIONS.map(({ value, label }) => (
             <label key={value} className="choice__option">
               <input
@@ -155,7 +180,10 @@ export function RestorationCard({ restoration, scenario, onScenarioChange, onRes
         </fieldset>
 
         <div className="whatif__damage">
-          <p className="choice__legend">Repairs to assume</p>
+          <div className="tiprow">
+            <p className="choice__legend">Repairs to assume</p>
+            <InfoTip label="repairs to assume">{REPAIRS_HELP}</InfoTip>
+          </div>
           <p className="field__hint">
             {chosenKinds
               ? "Using the kinds of damage you chose below."

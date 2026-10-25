@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
+import { LOCATION_CHIP_HELP, LOCATION_HELP } from "../lib/explain";
 import { parseLocation } from "../lib/parseLocation";
+import { InfoTip } from "./InfoTip";
 import { CloseIcon, PinIcon } from "./icons";
 import "./LocationScope.css";
 
@@ -42,9 +44,12 @@ export function LocationScope({ location, areaName, onChange }: Props) {
     <section className="scope" aria-label="Location">
       <div className="container scope__inner">
         <form className="scope__form" onSubmit={handleSubmit} noValidate>
-          <label className="scope__label" htmlFor="location-input">
-            Your location
-          </label>
+          <div className="tiprow">
+            <label className="scope__label" htmlFor="location-input">
+              Your location
+            </label>
+            <InfoTip label="your location">{LOCATION_HELP}</InfoTip>
+          </div>
           <div className="scope__row">
             <input
               id="location-input"
@@ -83,6 +88,7 @@ export function LocationScope({ location, areaName, onChange }: Props) {
               Scoped to <strong>{location}</strong>
               {areaName && areaName !== location && <> &middot; {areaName} area</>}
             </span>
+            <InfoTip label="your location scope">{LOCATION_CHIP_HELP}</InfoTip>
             <button type="button" className="scope__clear" onClick={handleClear}>
               <CloseIcon size={16} />
               <span className="sr-only">Clear location</span>

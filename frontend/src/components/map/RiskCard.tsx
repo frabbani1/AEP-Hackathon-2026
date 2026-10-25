@@ -1,7 +1,9 @@
 import type { ConfidenceLevel, RiskAssessment, SeverityInfo } from "../../api";
 import { BAND_SUMMARY } from "../../lib/bands";
+import { CONFIDENCE_HELP, FACTORS_HELP, RISK_HELP } from "../../lib/explain";
+import { InfoTip } from "../InfoTip";
 import { ArrowDownIcon, ArrowUpIcon } from "../icons";
-import { Card, RiskBadge, Tag } from "./Card";
+import { Card, RiskBadge, SubHead, Tag } from "./Card";
 
 const LEVEL_BARS: Record<ConfidenceLevel, number> = { Low: 1, Medium: 2, High: 3 };
 
@@ -18,7 +20,7 @@ function ConfidenceMeter({ level }: { level: ConfidenceLevel }) {
 /** "Will I lose power?" Band, confidence, and the reasons behind them. */
 export function RiskCard({ risk, severity }: { risk: RiskAssessment; severity: SeverityInfo }) {
   return (
-    <Card id="risk" title="Will I lose power?" tag={<Tag kind="model" />}>
+    <Card id="risk" title="Will I lose power?" info={RISK_HELP} tag={<Tag kind="model" />}>
       <div className="risk">
         <RiskBadge band={risk.band} size="lg" />
         <p className="risk__summary">{BAND_SUMMARY[risk.band]}</p>
@@ -28,6 +30,7 @@ export function RiskCard({ risk, severity }: { risk: RiskAssessment; severity: S
       <p className="confidence">
         <strong>Confidence: {risk.confidence.level}</strong>
         <ConfidenceMeter level={risk.confidence.level} />
+        <InfoTip label="confidence">{CONFIDENCE_HELP}</InfoTip>
       </p>
       <p className="card__muted">
         {risk.confidence.reason}
@@ -45,7 +48,7 @@ export function RiskCard({ risk, severity }: { risk: RiskAssessment; severity: S
           </p>
         </>
       )}
-      <h4 className="card__subhead">Why we say this</h4>
+      <SubHead info={FACTORS_HELP}>Why we say this</SubHead>
       <ul className="factors">
         {risk.topFactors.map((factor) => (
           <li key={factor.id} className={`factors__item factors__item--${factor.direction}`}>

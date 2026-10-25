@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import type { EventKind } from "../api";
 import type { SummaryState } from "../hooks/useEventSummary";
+import { SAMPLE_DATA_HELP, STORM_SUMMARY_HELP } from "../lib/explain";
+import { InfoTip, TitleWithTip } from "./InfoTip";
 import { BoltIcon, ChevronIcon, ClockIcon, StormIcon, WarningIcon } from "./icons";
 import "./StormSummary.css";
 
@@ -19,11 +21,16 @@ export function StormSummary({ state }: { state: SummaryState }) {
     <section className="summary" aria-labelledby="summary-title">
       <div className="container">
         <div className="summary__head">
-          <h2 id="summary-title" className="summary__title">
-            Storm summary
-          </h2>
+          <TitleWithTip tip={<InfoTip label="the storm summary">{STORM_SUMMARY_HELP}</InfoTip>}>
+            <h2 id="summary-title" className="summary__title">
+              Storm summary
+            </h2>
+          </TitleWithTip>
           {state.status === "ready" && state.summary.source === "sample" && (
-            <span className="summary__badge">Sample data</span>
+            <span className="tagwrap">
+              <span className="summary__badge">Sample data</span>
+              <InfoTip label="sample data">{SAMPLE_DATA_HELP}</InfoTip>
+            </span>
           )}
           <button
             type="button"
