@@ -443,10 +443,38 @@ export interface WeatherOutlook {
 /** `POST /outlook` answers "not_found" (not an error) when no US place matches what was typed. */
 export type OutlookResult = WeatherOutlook | { status: "not_found" };
 
+/* -------------------------------------------------------------------------- */
+/* Email me this alert (`POST /alerts/email`)                                  */
+/*                                                                             */
+/* Sends ONE real email to an address the person types, after they tick a      */
+/* consent box. The address is used to send it and is not stored. The reply    */
+/* always carries the exact text so the page can show it.                      */
+/* -------------------------------------------------------------------------- */
+
+export type AlertEmailStatus = "sent" | "not_configured" | "failed" | "rate_limited";
+
+/** What to put in the email: an outage-map area as the customer has set it up, or a forecast-only place. */
+export type AlertEmailTarget =
+  | { kind: "area"; request: ZoneAssessmentRequest }
+  | { kind: "outlook"; query: string };
+
+export interface AlertEmailResult {
+  status: AlertEmailStatus;
+  kind: "area" | "outlook";
+  /** The address with most of it hidden, such as "f***@gmail.com". */
+  to: string;
+  fromName: string;
+  /** One plain sentence saying what happened. */
+  message: string;
+  email: { subject: string; body: string };
+}
+
 export interface ConciergeClient {
   getEventSummary(location: string | null, signal?: AbortSignal): Promise<EventSummary>;
   /** Forecast-only outlook for a typed city or ZIP code. Rejects with an `ApiError` (400) for a street address. */
   getOutlook(query: string, signal?: AbortSignal): Promise<OutlookResult>;
+  /** Email one alert to the address the person typed. Rejects with an `ApiError` (400) for a bad address or request. */
+  sendAlertEmail(email: string, target: AlertEmailTarget, signal?: AbortSignal): Promise<AlertEmailResult>;
   /** Match a typed city or ZIP code to a map area. Rejects with an `ApiError` (400) for a street address. */
   findArea(query: string, signal?: AbortSignal): Promise<FindAreaResult>;
   getMapZones(request: MapZonesRequest, signal?: AbortSignal): Promise<MapZonesResponse>;

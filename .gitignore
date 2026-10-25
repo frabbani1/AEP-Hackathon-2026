@@ -39,3 +39,7 @@ council_out/
 *.zip
 *.parquet
 *.jsonl
+# Local secrets (SMTP login for the "email me this alert" button). Never commit these; the repo is public.
+.env
+.env.local
+.env.*.local
