@@ -30,12 +30,14 @@ BAND_WORDS = {"High": "higher", "Medium": "moderate", "Low": "lower"}
 SCENARIO_WORDS = {"sep-2024-like": "a milder storm like September 2024", "typical": "a typical storm",
                   "feb-2025-like": "a stronger storm like February 2025",
                   "beyond-observed": "a storm stronger than any we have seen",
+                  "weather": "a storm of the strength the weather in your area points to",
                   "custom": "the storm strength you chose"}
 
 # The model's version of the scenario words: SCENARIO_WORDS names the year of two past storms, and the model sees no digit.
 SCENARIO_PROMPT_WORDS = {"sep-2024-like": "a milder past storm", "typical": "a typical storm",
                          "feb-2025-like": "a stronger past storm",
                          "beyond-observed": "a storm stronger than any we have seen",
+                         "weather": "a storm of the strength the weather in your area points to",
                          "custom": "the storm strength you chose"}
 
 # Digit-free factor sentences keyed by (factor id, direction). The risk engine's own sentences state numbers.
@@ -49,8 +51,8 @@ FACTOR_TEXT = {
     ("dev", "lowers"): "Power reaches you through fewer protective devices than most homes.",
     ("hops", "raises"): "You are farther down the line from the power source than most homes.",
     ("hops", "lowers"): "You are closer to the power source than most homes.",
-    ("sev", "raises"): "The storm scenario you picked is stronger than a typical past storm.",
-    ("sev", "lowers"): "The storm scenario you picked is milder than a typical past storm.",
+    ("sev", "raises"): "The storm strength in this scenario is stronger than a typical past storm.",
+    ("sev", "lowers"): "The storm strength in this scenario is milder than a typical past storm.",
 }
 # Digit-free stand-ins for the confidence reason (the engine's reason states record counts).
 CONFIDENCE_SAFE = {

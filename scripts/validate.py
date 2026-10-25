@@ -143,12 +143,18 @@ def readable_parquet(clean: Path) -> list[Path]:
     return out
 
 
+# Keys that look like a banned column but are not one in this file. zones.json labels each map area "Area 1", "Area 2";
+# the banned `name` column is for hospital and facility names.
+ALLOWED_JSON_KEYS = {"zones.json": frozenset({"name"})}
+
+
 def check_privacy(r: Report, clean: Path, raw_ids: set[str] | None) -> None:
     hits = []
     for p in readable_parquet(clean):
         hits += [f"{p.name}:{c}" for c in pq.read_schema(p).names if is_banned(c)]
     for p in clean.rglob("*.json"):
-        hits += [f"{p.name}:{k}" for k in set(json_keys(json.loads(p.read_text()))) if is_banned(k)]
+        allowed = ALLOWED_JSON_KEYS.get(p.name, frozenset())
+        hits += [f"{p.name}:{k}" for k in set(json_keys(json.loads(p.read_text()))) if is_banned(k) and k not in allowed]
     for p in clean.rglob("*.jsonl"):
         keys = set()
         for line in open(p, encoding="utf-8"):
@@ -199,6 +205,25 @@ def check_groups(r: Report, clean: Path) -> None:
     r.info.append(f"device_dim: {sum(dev):,} of {len(dev):,} devices serve fewer than {MIN_GROUP} premises "
                   f"(flagged small_group; device keys are salted and carry no location, so not counted as a "
                   f"published group)")
+
+
+def check_zones(r: Report, clean: Path) -> None:
+    """serving/risk/zones.json: every map area is a published group, ids are unique, each area is rated or has a reason."""
+    doc = json.loads((clean / "serving/risk/zones.json").read_text())
+    zones = doc["zones"]
+    small = [z["id"] for z in zones if z["n"] < MIN_GROUP]
+    r.check("groups", f"zones.json areas >= {MIN_GROUP} premises", not small and doc["min_homes"] == MIN_GROUP,
+            f"{len(zones)} areas, min {min(z['n'] for z in zones)}" + (f", {len(small)} small" if small else ""))
+    r.check("groups", "zones.json ids unique", len({z["id"] for z in zones}) == len(zones), f"{len(zones)} ids")
+    both = [z["id"] for z in zones if (z["rep"] is None) == (z["fb"] is None)]
+    r.check("groups", "zones.json each area has a typical home or a reason", not both, f"{len(both)} bad")
+    reps = [z["rep"] for z in zones if z["rep"]]
+    r.check("groups", "zones.json no home represents two areas", len(reps) == len(set(reps)), f"{len(reps)} typical homes")
+    hexed = sum(1 for c in pq.read_table(clean / "curated/tables/premise_dim.parquet", columns=["hex_cell"])
+                .column("hex_cell").to_pylist() if c is not None)
+    covered = sum(z["n"] for z in zones)
+    r.check("groups", "zones.json homes do not exceed homes with a cell", covered <= hexed,
+            f"{covered:,} in areas, {hexed:,} with a cell")
 
 
 def check_rows(r: Report, clean_rows: dict, staging_rows: dict, etl: dict, raw_counts: dict | None,
@@ -301,7 +326,8 @@ def main() -> int:
     # A check that crashes (missing table, wrong schema) is recorded as a FAIL so the report is still written.
     for name, fn in [("privacy", lambda: check_privacy(r, clean, raw_ids)),
                      ("rows", lambda: check_rows(r, clean_rows, staging_rows, etl, counts, previous)),
-                     ("groups", lambda: check_groups(r, clean))]:
+                     ("groups", lambda: check_groups(r, clean)),
+                     ("groups", lambda: check_zones(r, clean))]:
         try:
             fn()
         except Exception as e:  # noqa: BLE001

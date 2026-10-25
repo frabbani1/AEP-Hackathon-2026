@@ -24,14 +24,16 @@ Errors look like `{"error": {"code": "bad_request", "message": "..."}}`.
 | `GET /evidence` | none | backtest headline numbers, rule-generated verdicts (`supports`, `mixed`, `does_not_support`, `not_testable`), plot locations, and the six-item limits list. `status` is `unavailable` until a reviewed `backtest.json` is uploaded. Aggregates only, no identifiers |
 | `POST /messages` | `token`, `message_type`, `channel?`, `severity?`, `needs?`, `use_llm?`, `prior_estimate?` | one customer message and how it was produced |
 | `POST /assistant` | `token`, `kind`, `channel?`, `stage?`, `severity?`, `needs?`, `use_llm?`, `prior_estimate?`, plus restoration inputs | one of eight kinds of plain-language text, with separate sections for confirmed facts, model estimates and customer actions, and its provenance (see "Assistant") |
-| `POST /zones` | `severity?` | the outage map: every area's outline, risk band and confidence for one storm scenario, and the smallest group of homes an area may cover. `503` until `zones.json` is published |
-| `POST /zones/assess` | `zone_id`, `severity?`, `needs?`, `crews?`, `access?`, `damage?` or `damage_count?`, `use_llm?` (default `false`) | all four answers for one area in the shape the map shows: risk, restoration (P50 to P90, steps, what moves it), preparation, alert level and eligibility, four sample messages, assumptions. See "Outage map" |
+| `POST /zones` | `severity?` (also `weather`), `as_of?` | the outage map: every area's outline, risk band and confidence for one storm scenario, and the smallest group of homes an area may cover. With `severity: "weather"` each area uses the weather at its own location (see "Weather"). `503` until `zones.json` is published |
+| `POST /zones/assess` | `zone_id`, `severity?` (also `weather`), `as_of?`, `needs?`, `crews?`, `access?`, `damage?` or `damage_count?`, `use_llm?` (default `false`) | all four answers for one area in the shape the map shows: risk, restoration (P50 to P90, steps, what moves it), preparation, alert level and eligibility, four sample messages, assumptions. See "Outage map" |
+| `POST /weather` | `zone_id`, `as_of?` | current conditions, the last 24 hours and the next 48 hours for one area (or 48 hours from a past date), hazards, and the storm strength they imply. `503` if Open-Meteo does not answer. See "Weather" |
 | `POST /summary` | same as `/alerts` | risk + restoration + guidance + alerts in one call (one premise-table read, plus one alerts-table read for the sign-up) |
 
 Inputs
 
 - `token`: `p_` plus 16 hex characters (an opaque premise token from the clean tables).
-- `severity`: `sep-2024-like`, `typical` (default), `feb-2025-like`, `beyond-observed`, or a number from 0.25 to 3.0.
+- `severity`: `sep-2024-like`, `typical` (default), `feb-2025-like`, `beyond-observed`, or a number from 0.25 to 3.0. On `/zones` and `/zones/assess` it can also be `weather`: storm strength then comes from real weather at the area (see "Weather"). Token routes (`/risk`, `/summary` and the rest) answer `400` to `weather`, because a token carries no location.
+- `as_of`: a past date such as `2025-02-16`, only with `severity: "weather"` (and on `/weather`). It replays 48 hours of that date's weather instead of using the live forecast.
 - `crews`: whole number 1 to 100 (default 3). `access`: `normal` (default), `restricted`, `remote`.
 - `damage`: optional list of `{"asset_type", "qty"}` (qty 1 to 20, up to 10 items). `asset_type` is one of
   `primary_line`, `secondary_line`, `pole`, `fuse_bank`, `transformer`, `recloser`, `switch`, `capacitor_bank`,
@@ -163,6 +165,44 @@ The map shows areas, the engines take premise tokens. `zones.json` (built by `co
   Run `make etl` and upload before the map routes work in the cloud. Locally, `scripts/dev_api.py` serves the handler on
   127.0.0.1:8787 and the Vite dev server proxies `/api` to it.
 
+## Weather (`severity: "weather"`, `POST /weather`)
+
+Weather is real data from [Open-Meteo](https://open-meteo.com) (CC BY 4.0, attribution is in every weather block). It sets
+the storm strength; it does not replace the risk or restoration engines.
+
+- **Where.** An area's weather is looked up at the middle of its outline, rounded to a 0.05 degree grid (about 5 km).
+  That rounded coordinate is the only thing sent to Open-Meteo: no token, no premise value, no text from a customer.
+- **When.** Live: the current conditions, the last 24 hours and the next 48 hours (`ahead_48h`). The storm strength reads only
+  the forecast hours. With `as_of` it reads the 48 hours starting 00:00 UTC on that date, and the block says
+  `kind: "historical"`. Live answers are cached for 15 minutes, past dates for the life of the Lambda instance.
+- **What counts.** Peak wind gust in the window. It is placed on a straight line through the two storms in our damage data:
+  the peak gust of each storm (from the Open-Meteo archive, `backend/concierge/weather/anchors.json`) maps to that storm's own
+  multiplier. At or below 25 mph the scale reads its mildest scenario (0.25). Above the stronger storm the line continues and
+  is capped at 3.0, and the answer is marked `extrapolated` with its confidence lowered one level.
+  `scripts/calibrate_weather.py` regenerates the anchors.
+- **What does not count.** Ice, snow load, rain, lightning and tree condition are shown in `hazards` (`modelled: false`) and
+  do not move the rating. The two past storms were wind events, so the data cannot say how those other hazards matter.
+- **How good is the scale.** It is two points and a line, so it is an assumption, not a fitted outage model. As a check,
+  replaying the two storm dates across all map areas gives a median multiplier of 0.56 for 2024-09-27 (the engine's own
+  value for that storm is 0.27) and 1.85 for 2025-02-16 (1.73). The check is partly circular: the anchors come from the same
+  storms at the middle of the service area. Peak gusts differed by about 13 mph (2024-09-27) and 18 mph (2025-02-16) between areas on the same day, which is why each area is looked up
+  on its own.
+- **Basis.** Open-Meteo's current and recent values come from weather models fed by observations. They are not a reading
+  from one measuring site, and the block says so (`basis`). Forecast values can change. Nothing here is a National Weather
+  Service product.
+- **Failure.** If Open-Meteo does not answer, `/zones` and `/zones/assess` still return 200 with the default typical-storm
+  scenario and a `weather` block with `status: "unavailable"`, `reason` and `notice`. `/weather` returns 503.
+- **Response keys** (snake_case): `status`, `source`, `attribution`, `basis`, `kind`, `as_of`, `fetched_at`, `location`
+  (`area`, `grid_lat`, `grid_lon`), `units`, `current`, `recent_24h`, `ahead_48h` (or `window_48h` for a past date), `hazards`,
+  `hourly`, `severity_window`, and `severity` (`source`, `multiplier`, `peak_gust_mph`, `method`, `anchors`).
+  On `/zones` the block is a summary (`areas_total`, `areas_without_weather`, `peak_gust_mph_min`/`max`, `severity`
+  with `multiplier_min`/`max`) and each area adds `multiplier` and `peak_gust_mph`.
+- **Not in the model's words.** The weather block is built by code. The assistant and message prompts still say the model has
+  no weather data, and the guards still reject any draft that mentions wind, rain, snow or ice. Text that names the scenario says
+  "a storm of the strength the weather in your area points to".
+- **Limits.** The free Open-Meteo tier is for non-commercial use with daily call limits; a commercial deployment needs a paid
+  key. The Lambda calls the public internet, so a weather outage adds up to about 8 seconds to a request before it falls back.
+
 ## Demo-only sign-up, mock delivery and audit
 
 - **Nothing is ever sent.** There is no SMS, voice, push or email integration, and the Lambda role has no permission to
@@ -196,6 +236,6 @@ they leave the Lambda.
   says "your line" or "your home" because it was written for one premise.
 - Premises on very small lines, or with no damage history, return `status: insufficient_data` with a plain-language
   fallback instead of a number.
-- No weather data, live crew locations or road conditions are used.
+- Weather sets the storm strength (wind gusts only, on request). Live crew locations and road conditions are not used.
 - Alert timing has no quiet hours because no time zone is known. Estimate-updated rules need the caller to supply the
   earlier estimate (`prior_typical_hours`).

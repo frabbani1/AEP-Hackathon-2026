@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import OrderedDict
 from collections.abc import Callable, Mapping
+from datetime import date
+from statistics import median
 from typing import Any
 
 from ..alerts import audit as alert_audit
@@ -26,6 +29,9 @@ from ..risk.confidence import FALLBACK_MESSAGES, downgrade
 from ..risk.engine import RiskEngine
 from ..risk.schema import WhitelistError, _scan_strings
 from ..risk.tokens import TOKEN_RE
+from ..weather import severity as wx_severity
+from ..weather import summary as wx_summary
+from ..weather.openmeteo import OpenMeteo, WeatherError, snap_point
 from ..zones import view as zone_view
 from ..zones.index import MIN_HOMES, ZONE_ID_RE, Zone, ZoneIndex
 
@@ -33,6 +39,8 @@ from ..zones.index import MIN_HOMES, ZONE_ID_RE, Zone, ZoneIndex
 log = logging.getLogger("concierge.api")
 
 EVIDENCE_RETRY_SECONDS = 60   # how often a missing backtest report is looked for again
+AS_OF_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+EARLIEST_AS_OF = date(1950, 1, 1)     # the Open-Meteo archive starts well before this
 LAYER_CACHE_SIZE = 16         # map layers kept per storm scenario (a layer is a pure function of the scenario)
 
 
@@ -62,9 +70,12 @@ class Concierge:
                  alert_store: AlertStore | None = None, clock: Clock = utc_now,
                  evidence_loader: Callable[[], Mapping | None] | None = None,
                  tree: RestorationTree | None = None, restoration_engine: str | None = None,
-                 assistant: Assistant | None = None, zones: ZoneIndex | None = None):
+                 assistant: Assistant | None = None, zones: ZoneIndex | None = None, weather: OpenMeteo | None = None,
+                 weather_anchors: Mapping | None = None):
         self.rows, self.labor = rows, labor
         self.zones = zones
+        self.weather = weather
+        self._weather_anchors = weather_anchors
         self._layers: OrderedDict[Any, dict] = OrderedDict()
         self.assistant = assistant if assistant is not None else Assistant()      # no model unless one is passed in
         self._evidence_loader = evidence_loader
@@ -92,11 +103,124 @@ class Concierge:
 
     def severity(self, body: Mapping) -> Any:
         s = body.get("severity", "typical")
+        if s == "weather":
+            raise BadRequest("severity 'weather' needs a map area. Use /zones, /zones/assess or /weather.")
         try:
             self.engine.resolve_severity(s)
         except ValueError as e:
             raise BadRequest(str(e)) from None
         return s
+
+    # ---- weather ----------------------------------------------------------------------------------------------
+    def _as_of(self, body: Mapping) -> date | None:
+        v = body.get("as_of")
+        if v is None:
+            return None
+        if not isinstance(v, str) or not AS_OF_RE.match(v):
+            raise BadRequest("as_of must be a date like 2025-02-16")
+        try:
+            d = date.fromisoformat(v)
+        except ValueError:
+            raise BadRequest("as_of must be a real calendar date like 2025-02-16") from None
+        if d >= self.clock().date():
+            raise BadRequest("as_of must be a past date. Leave it out to use the current weather and forecast.")
+        if d < EARLIEST_AS_OF:
+            raise BadRequest(f"as_of must be on or after {EARLIEST_AS_OF.isoformat()}")
+        return d
+
+    def _anchors(self) -> Mapping:
+        if self._weather_anchors is None:
+            self._weather_anchors = wx_severity.load_anchors()
+        return self._weather_anchors
+
+    @staticmethod
+    def _zone_point(zone: Zone) -> tuple[float, float]:
+        """Where to ask for weather: the middle of the area's outline, snapped to the 0.05 degree grid. Never a home."""
+        lng = sum(p[0] for p in zone.ring) / len(zone.ring)
+        lat = sum(p[1] for p in zone.ring) / len(zone.ring)
+        return snap_point(lat, lng)
+
+    def _series(self, points: list, day: date | None) -> dict:
+        if self.weather is None:
+            raise WeatherError("weather is turned off")
+        return self.weather.historical(points, day) if day else self.weather.live(points)
+
+    def _severity_block(self, gust: float) -> dict:
+        return wx_severity.severity_from_gust(gust, self._anchors(), self.engine.presets,
+                                              m_min=self.engine.cfg.severity_min, m_max=self.engine.cfg.severity_max)
+
+    def _severity_from_summary(self, wx: Mapping) -> dict | None:
+        gust = (wx.get("severity_window") or {}).get("peak_gust_mph")
+        return None if gust is None else self._severity_block(gust)
+
+    def _wx_unavailable(self, reason: str, area: str | None) -> dict:
+        wx = wx_summary.unavailable(reason, area)
+        wx["severity"] = {"source": "scenario_default", "preset": "typical",
+                          "multiplier": round(self.engine.presets["typical"], 2)}
+        wx["notice"] = ("Weather could not be loaded, so this answer uses the default typical-storm scenario "
+                        "instead of the real weather.")
+        return wx
+
+    def weather_context(self, zone: Zone, day: date | None) -> dict:
+        """The weather block for one area, with the storm strength it implies. Never raises: on any failure the block
+        says `unavailable` and carries the default scenario, so the customer still gets an answer and knows why."""
+        try:
+            pt = self._zone_point(zone)
+            wx = wx_summary.summarize(self._series([pt], day)[pt], zone.name)
+            sev = self._severity_from_summary(wx)
+        except (WeatherError, KeyError) as e:
+            log.warning("weather unavailable: %s", type(e).__name__)
+            return self._wx_unavailable("The weather service did not answer.", zone.name)
+        if sev is None:
+            return self._wx_unavailable("The weather data had no wind gust values.", zone.name)
+        wx["severity"] = sev
+        return wx
+
+    def severity_ctx(self, body: Mapping, zone: Zone) -> tuple[Any, dict | None]:
+        """(severity for the engines, weather block or None). `severity: "weather"` reads real weather for the area."""
+        if body.get("severity", "typical") != "weather":
+            if body.get("as_of") is not None:
+                raise BadRequest("as_of only works with severity 'weather'")
+            return self.severity(body), None
+        wx = self.weather_context(zone, self._as_of(body))
+        return ("typical", wx) if wx["status"] != "ok" else (wx["severity"]["multiplier"], wx)
+
+    @staticmethod
+    def _wx_compact(wx: Mapping) -> dict:
+        """The weather block without the hour-by-hour list."""
+        return {k: v for k, v in wx.items() if k != "hourly"}
+
+    @staticmethod
+    def _wx_apply(out: dict, wx: Mapping | None) -> dict:
+        """Make an engine answer say where its storm strength came from. The engines keep their own wording for
+        scenarios the customer picks; with real weather those sentences would be wrong."""
+        if wx is None or wx.get("status") != "ok" or not out:
+            return out
+        if isinstance(out.get("severity"), dict) and out["severity"].get("preset") == "custom":
+            out["severity"]["preset"] = "weather"
+        swaps = {
+            "Storm strength is a scenario you choose, not a weather forecast.":
+                "Storm strength comes from the weather data for your area, placed on the scale of past storms. "
+                "That step is an assumption, not a measured link.",
+            "No weather data is used.":
+                "Only wind gusts move the storm strength. Ice, snow, rain and lightning are shown but are not in the rating.",
+            "No live crew locations, road conditions, or weather are used.":
+                "No live crew locations or road conditions are used. Weather only sets the storm strength.",
+            "Guidance is general and based on the scenario you chose. It is not a weather forecast.":
+                "Guidance is general and based on the storm strength taken from weather data for your area. "
+                "It is not a prediction that you will lose power.",
+        }
+        for key in ("assumptions", "missing_data", "notes"):
+            if isinstance(out.get(key), list):
+                out[key] = [swaps.get(x, x).replace("the storm scenario you chose",
+                                                    "the storm strength taken from weather data")
+                            if isinstance(x, str) else x for x in out[key]]
+        for f in out.get("top_factors") or []:
+            if f.get("id") == "sev":
+                f["text"] = ("The weather for your area points to a storm stronger than a typical past storm."
+                             if f.get("direction") == "raises" else
+                             "The weather for your area points to a storm milder than a typical past storm.")
+        return out
 
     @staticmethod
     def needs(body: Mapping) -> dict[str, bool]:
@@ -388,6 +512,10 @@ class Concierge:
     def zone_layer(self, body: Mapping) -> dict:
         """Every zone with its band and confidence for one storm scenario. No premise token leaves this method."""
         index = self._zone_index()
+        if body.get("severity", "typical") == "weather":
+            return self._weather_layer(index, body)
+        if body.get("as_of") is not None:
+            raise BadRequest("as_of only works with severity 'weather'")
         severity = self.severity(body)
         key = severity if isinstance(severity, str) else float(severity)
         if key in self._layers:
@@ -407,6 +535,65 @@ class Concierge:
             self._layers.popitem(last=False)
         return out
 
+    def _weather_layer(self, index: ZoneIndex, body: Mapping) -> dict:
+        """The map layer with each area's storm strength taken from the weather at its own location. Not cached: the
+        weather client caches the weather itself (15 minutes live, for good for a past date)."""
+        day = self._as_of(body)
+        points = {z.id: self._zone_point(z) for z in index}
+        try:
+            series = self._series(sorted(set(points.values())), day)
+        except WeatherError as e:
+            log.warning("zone weather unavailable: %s", type(e).__name__)
+            out = dict(self.zone_layer({"severity": "typical"}))          # a copy: the cached layer stays as it was
+            out["weather"] = self._wx_unavailable("The weather service did not answer.", None)
+            return out
+        gust_at = {pt: (wx_summary.summarize(sr)["severity_window"] or {}).get("peak_gust_mph")
+                   for pt, sr in series.items()}
+        typical = self.engine.presets["typical"]
+        mult: dict[str, float] = {}
+        gust: dict[str, float | None] = {}
+        for z in index:
+            g = gust_at.get(points[z.id])
+            gust[z.id] = g
+            mult[z.id] = typical if g is None else self._severity_block(g)["multiplier"]
+        ratings: dict[str, tuple[str, str] | None] = {}
+        for z in index:
+            risk = self.risk(z.rep, mult[z.id]) if z.rep else None
+            ok = risk is not None and risk["status"] == "ok"
+            ratings[z.id] = (risk["band"], risk["confidence"]["level"]) if ok else None
+        ms = sorted(mult.values())
+        sev_out = {"preset": "weather", "multiplier": round(median(ms), 2),
+                   "extrapolated": any(self.engine.resolve_severity(m)["extrapolated"] for m in ms)}
+        out = zone_view.layer([{"id": z.id, "name": z.name, "ring": z.ring} for z in index], ratings, sev_out,
+                              index.bounds, MIN_HOMES)
+        for item in out["zones"]:
+            item["multiplier"] = round(mult[item["id"]], 3)
+            item["peak_gust_mph"] = gust[item["id"]]
+        gusts = [g for g in gust.values() if g is not None]
+        ref = self._severity_block(max(gusts) if gusts else 0.0)
+        out["weather"] = {
+            "status": "ok", "source": "Open-Meteo", "attribution": wx_summary.ATTRIBUTION, "basis": wx_summary.BASIS,
+            "kind": "historical" if day else "live", "as_of": day.isoformat() if day else None,
+            "areas_total": len(index), "areas_without_weather": sum(1 for g in gust.values() if g is None),
+            "peak_gust_mph_max": max(gusts) if gusts else None, "peak_gust_mph_min": min(gusts) if gusts else None,
+            "severity": {"source": "weather", "multiplier_min": round(ms[0], 2), "multiplier_max": round(ms[-1], 2),
+                         "method": ref["method"], "anchors": ref["anchors"]},
+        }
+        return self._finish(out)
+
+    def weather_view(self, body: Mapping) -> dict:
+        """Current weather and forecast (or a past date) for one map area, with the storm strength it implies."""
+        zone = self._zone(body)
+        try:
+            pt = self._zone_point(zone)
+            wx = wx_summary.summarize(self._series([pt], self._as_of(body))[pt], zone.name)
+        except (WeatherError, KeyError):
+            raise Unavailable("Weather could not be loaded right now. Try again in a minute.") from None
+        sev = self._severity_from_summary(wx)
+        if sev is not None:
+            wx["severity"] = sev
+        return self._finish(wx)
+
     def _zone(self, body: Mapping) -> Zone:
         zid = body.get("zone_id")
         if not isinstance(zid, str) or not ZONE_ID_RE.match(zid):
@@ -420,18 +607,19 @@ class Concierge:
         """All four answers for one zone, through its representative premise. The premise token stays on the server and
         nothing is written to the alerts audit log, because browsing the map is not an alert decision."""
         zone = self._zone(body)
-        severity, needs, scenario = self.severity(body), self.needs(body), self.scenario(body)
+        severity, wx = self.severity_ctx(body, zone)
+        needs, scenario = self.needs(body), self.scenario(body)
         use_llm = body.get("use_llm", False)
         if not isinstance(use_llm, bool):
             raise BadRequest("use_llm must be true or false")
         rated = zone.rep is not None
         token = zone.rep or zone_view.UNRATED_TOKEN
-        risk = self.risk(token, severity)
-        restoration = self.restoration(token, severity, scenario)
+        risk = self._wx_apply(self.risk(token, severity), wx)
+        restoration = self._wx_apply(self.restoration(token, severity, scenario), wx)
         if not rated:                                    # say why this area has no rating, not "unknown premise"
             fallback = zone_view.unrated_fallback(zone.fallback)
             risk, restoration = {**risk, "fallback": fallback}, {**restoration, "fallback": fallback}
-        guidance = self.guidance(risk, restoration, needs)
+        guidance = self._wx_apply(self.guidance(risk, restoration, needs), wx)
         decision = self._decide(token, risk, restoration, needs, {}, None)
 
         def ask(kind: str, channel: str = "sms") -> dict:
@@ -457,6 +645,8 @@ class Concierge:
             "transparency": zone_view.transparency_view(risk, restoration, rated and risk["status"] == "ok"),
             "fallback": risk.get("fallback"),
         }
+        if wx is not None:
+            out["weather"] = wx                            # code-built from Open-Meteo; the model never saw it
         return self._finish(out)
 
     def message(self, token: str, severity: Any, body: Mapping, risk: Mapping, restoration: Mapping,
@@ -493,11 +683,15 @@ class Concierge:
                                   "use_llm", "prior_estimate"})
             out = self.assist(body)
         elif route == "zones":
-            _only(body, {"severity"})
+            _only(body, {"severity", "as_of"})
             return self.zone_layer(body)
         elif route == "zones/assess":
-            _only(body, {"zone_id", "severity", "crews", "access", "damage", "damage_count", "needs", "use_llm"})
+            _only(body, {"zone_id", "severity", "as_of", "crews", "access", "damage", "damage_count", "needs",
+                         "use_llm"})
             return self.zone_assess(body)
+        elif route == "weather":
+            _only(body, {"zone_id", "as_of"})
+            return self.weather_view(body)
         elif route == "alerts/enroll":
             _only(body, {"token", "channels", "needs", "message_types"})
             out = self.enroll(body)

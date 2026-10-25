@@ -70,7 +70,8 @@ A customer selects an anonymized location on a map. The assistant returns:
 ## 6. Methodology
 
 ### 6.1 Storm severity
-No weather data is provided, so severity is a **scenario input**:
+No weather data is provided with the challenge, so severity is a **scenario input** by default. The API can also take it from
+real weather (Open-Meteo, wind gusts) for a map area, live or replayed for a past date; see `docs/api.md`, "Weather".
 - A slider / named scenarios (e.g., moderate storm, derecho, ice storm).
 - Calibrated from historical events in the damage data (e.g., damage points per mile of line per event).
 - Optional: add NOAA historical wind/ice data if time allows.
@@ -158,7 +159,8 @@ streamlit run app.py
 
 ## 12. Limitations and Assumptions
 
-- Storm severity is simulated/calibrated, not live weather.
+- Storm severity is a scenario by default. With `severity: "weather"` it comes from Open-Meteo wind gusts placed on a two-point scale
+  built from the two storms in the data. That scale is an assumption, not a fitted model, and ignores ice, snow load and rain.
 - Labor and travel multipliers are representative averages.
 - Estimates are not confirmed utility restoration times. The restoration range (P50 to P90) comes from a seeded
   simulation whose spreads (labor hours, crew presence) are stated assumptions, not values fitted to observed repairs;
@@ -174,7 +176,7 @@ streamlit run app.py
 
 ## 13. Future Work
 
-- Live weather feeds and crew-tracking integration.
+- Fit the weather-to-severity scale on more storms, and use ice and snow load. Crew-tracking integration.
 - Survival-style duration models.
 - Multi-language and SMS/voice channels.
 - Real customer-profile integration with proper consent.

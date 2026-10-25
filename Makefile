@@ -14,7 +14,7 @@ PY           ?= .venv/bin/python
 export AWS_REGION RAW_BUCKET CLEAN_BUCKET
 export AWS_DEFAULT_REGION := $(AWS_REGION)
 
-.PHONY: all ingest etl validate docs iam check-aws load-table deploy smoke
+.PHONY: all ingest etl validate docs iam check-aws load-table deploy smoke burst
 
 all: ingest etl validate docs
 
@@ -51,3 +51,7 @@ deploy: check-aws
 
 smoke:
 	bash scripts/smoke.sh
+
+# 30 concurrent calls at the deployed assistant (spec-06 task 8.3). Calls Bedrock, so run it on purpose.
+burst:
+	$(PY) scripts/burst_test.py

@@ -73,6 +73,8 @@ export class ConciergeStack extends cdk.Stack {
         ENROLL_TABLE: alertsTable.tableName,
         CLEAN_BUCKET: cleanBucket.bucketName,
         BEDROCK_MODEL_ID: props.bedrockModelId,
+        // Weather comes from Open-Meteo over the public internet (the Lambda is not in a VPC). "0" turns it off.
+        WEATHER_ENABLED: "1",
         POWERTOOLS_LOG_LEVEL: "INFO",
       },
     });
@@ -93,7 +95,7 @@ export class ConciergeStack extends cdk.Stack {
     for (const prefix of ["", "/api"]) {
       api.addRoutes({ path: `${prefix}/health`, methods: [apigw.HttpMethod.GET], integration });
       for (const route of ["risk", "restoration", "guidance", "alerts", "messages", "summary", "assistant",
-        "alerts/enroll", "alerts/unenroll", "alerts/simulate", "zones", "zones/assess"]) {
+        "alerts/enroll", "alerts/unenroll", "alerts/simulate", "zones", "zones/assess", "weather"]) {
         api.addRoutes({ path: `${prefix}/${route}`, methods: [apigw.HttpMethod.POST], integration });
       }
       api.addRoutes({ path: `${prefix}/alerts/audit`, methods: [apigw.HttpMethod.GET], integration });

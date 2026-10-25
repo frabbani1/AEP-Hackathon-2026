@@ -32,7 +32,7 @@ markers = [
 ]
 
 [tool.setuptools.package-data]
-concierge = ["alerts/*.json", "assistant/prompts/*.txt"]
+concierge = ["alerts/*.json", "assistant/prompts/*.txt", "weather/*.json"]
 
 [tool.setuptools.packages.find]
 where = ["backend"]
