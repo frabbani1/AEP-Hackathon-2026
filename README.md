@@ -1,4 +1,3 @@
-# AEP-Hackathon-2026
 # AI Outage Concierge
 
 **HackOHI/O 2026 | AEP Challenge**
@@ -7,6 +6,8 @@
 > Predict. Explain. Prepare. Communicate.
 
 An AI-powered assistant that helps customers understand storm-related outage risk, expected restoration time, how to prepare, and whether they qualify for alerts, with honest uncertainty and privacy built in.
+
+The challenge text is in `docs/challenge.md`.
 
 ---
 
@@ -23,161 +24,204 @@ Utilities hold the data to answer these (damage history, circuit maps, network t
 
 ## 2. Our Solution (Summary)
 
-A customer selects an anonymized location on a map. The assistant returns:
+A customer types a city or ZIP code, or picks an area on a map. Areas are groups of at least 10 homes, so no address or premise is ever shown. The app returns:
 
-1. **Outage risk band** (Low / Medium / High) with a confidence level and top contributing factors.
-2. **Restoration-time range** that updates when the judge or customer changes the scenario (storm severity, crews, damage).
-3. **Personalized preparation and safety guidance**, with emergencies clearly labeled.
-4. **Alert eligibility** and recommended timing, channel, and escalation.
-5. **Proactive messages** (pre-storm, outage confirmed, estimate updated, restored).
-6. **Transparency panel:** confirmed facts vs. model estimates vs. customer actions, plus assumptions, missing data, and fallback.
+1. **Outage risk band** (Low / Medium / High) with a confidence level, the reason for that confidence, and the top contributing factors.
+2. **Restoration-time range** (P50 to P90 hours) that updates when the judge or customer changes the scenario: storm strength, crews, access, and the number or kinds of repair jobs.
+3. **Personalized preparation and safety guidance**, with safety items first and emergencies clearly labeled. Optional self-declared needs (medical equipment, limited mobility, electric heat or cooling) change the advice.
+4. **Alert eligibility** with the rules that fired, recommended timing and channels, and escalation.
+5. **Proactive messages** for four stages (pre-storm, outage confirmed, estimate updated, restoration complete).
+6. **Transparency panel:** confirmed facts vs. model estimates vs. customer actions, plus assumptions, missing data, and a fallback when the model cannot rate an area.
+7. **Evidence card:** how the model did on a backtest of two past storms, including where it did not beat a simple baseline.
 
 ## 3. Customer Journey
 
-1. Customer picks a location, premise, or circuit.
+1. Customer types a city or ZIP code (chat page) or picks an area on the map.
 2. Assistant shows risk band + confidence + "why".
-3. Customer adjusts the scenario (storm severity slider, crews available, damage type).
+3. Customer adjusts the scenario: storm strength (a past-storm preset, or live weather), crews, access, repair jobs.
 4. Assistant shows a restoration range and the factors that could move it.
 5. Assistant lists preparation steps and alert eligibility.
-6. Assistant generates the appropriate message for the current stage.
+6. Assistant shows the message for each stage.
 
 ## 4. Architecture
 
 ```
- Data (GIS, damage, topology, labor)  ->  Feature table  ->  Risk model
-                                                         ->  Restoration estimator
- Topology graph (matched_upstream)    ->  Customers-affected + step restoration
- Rules engine (alerts, safety)        ->  Eligibility + escalation
- LLM layer (explain only)             ->  Plain-language answers and messages
- Web UI (map + chat + sliders)        ->  Judge-facing demo
+ data/ (GIS, damage, topology, labor)
+   -> scripts/curate.py               clean tables      artifacts/curated/
+   -> scripts/build_risk_artifacts.py risk rows, tree, zones, calibration   artifacts/risk/
+        |
+        v
+ Lambda handler (backend/concierge/api)  <- same code runs locally via scripts/dev_api.py
+   risk engine        premise token -> band, confidence, factors
+   restoration engine seeded Monte Carlo over a restoration tree (step restoration) -> P50 / P90
+   guidance           hard-coded safety text + per-risk preparation items
+   alerts             rules table (alerts/rules_table.json) -> tier, timing, channels, audit entry
+   messages/assistant templates, optionally phrased by Bedrock, then checked by a guard
+   weather            Open-Meteo wind gusts -> storm strength (optional)
+        |
+        v
+ frontend/ (React + Leaflet): chat page, outage map, safety, about
 ```
 
-**Design principle:** the LLM never invents numbers. It only explains outputs from the model and rules.
+**Design principle:** the LLM never invents numbers. Deterministic Python computes every number. The model only phrases text from a whitelisted fact card, and if its output contains a number that is not in the card, the template text is used instead.
+
+The deployed shape (CDK in `infra/`) is S3 + CloudFront for the web app, an API Gateway HTTP API in front of a Python 3.12 Lambda, DynamoDB for the risk table and demo alert sign-ups, and Bedrock for optional phrasing.
 
 ## 5. Data
 
+All sources come from the organizer package and sit in `data/` (the `.dbf` files are Git LFS objects; run `git lfs pull` on a fresh clone). Row counts and match rates are in `docs/data_findings.md`; column rules are in `docs/data_dictionary.md` and `docs/data-cleaning.md`.
+
 | Source | Contents | Use |
 | --- | --- | --- |
-| Data1.zip | Shapefiles: customers, poles, primary lines, fuse banks, damage assessments, ambulance, fire stations, hospitals | Core features, damage labels, priority sites, map |
-| Data2.zip | Shapefiles: secondary lines, transformers, switches, recloser banks | Network detail, step restoration |
-| matched_upstream.txt | Premise -> upstream equipment relationships | Dependency graph, customers affected |
-| STORMS labor-hour reference (Excel) | Labor hours by damage type | Repair effort baseline |
-| Indirect labor assumptions (Excel) | Travel and nonproductive-time multipliers | Realistic durations |
-| Structure diagrams (PDF) | Sample structures incl. fuse drawing | Map damage type -> parts/materials |
+| `Data1/` | Shapefiles: customers (117,642), poles, primary lines, fuse banks, ARCOS damage assessments (1,659 rows), ambulance, fire stations, hospitals | Damage labels, features, map, priority sites |
+| `Data2/` | Shapefiles: secondary lines, transformers, switches, recloser banks | Network detail, protective devices |
+| `matched_upstream/` | Premise -> upstream device chain (117,599 premises, 110 circuits) | Dependency graph, step restoration |
+| `Install_Labor_HackOHIO.xlsx` | Labor hours per unit, access adders, indirect multiplier | Repair effort baseline |
+| `docs/structure_drawings.pdf` | Structure diagrams (images only) | Reference for mapping damage types to parts |
 
-> TODO: after inspecting the files, document actual layers, columns, row counts, event names, and data quality issues here.
+Facts that shaped the design:
+
+- The damage data has two storms: 2024-09-27 to 10-02 (193 rows) and 2025-02-12 to 02-18 (1,254 rows). There is no damage-type or quantity field.
+- The data covers the **Roanoke Valley, Virginia** (about 37.0 to 37.5 N, 79.6 to 80.3 W). The app says so and answers "not covered" for other places. For a US place outside it, `POST /outlook` gives a forecast-only outlook with no risk band, restoration time or alerts.
+- ARCOS circuit aliases (`CIR60`) and topology circuit ids (`0000060`) do not map one-to-one, so damage attribution to circuits has known error (see `CLAUDE.md`, "Verified data facts").
+
+Raw data is never modified. Derived output goes to `artifacts/` (gitignored except the backtest report).
 
 ## 6. Methodology
 
 ### 6.1 Storm severity
-No weather data is provided with the challenge, so severity is a **scenario input** by default. The API can also take it from
-real weather (Open-Meteo, wind gusts) for a map area, live or replayed for a past date; see `docs/api.md`, "Weather".
-- A slider / named scenarios (e.g., moderate storm, derecho, ice storm).
-- Calibrated from historical events in the damage data (e.g., damage points per mile of line per event).
-- Optional: add NOAA historical wind/ice data if time allows.
+No weather data is provided with the challenge, so severity is a **scenario input** by default: `sep-2024-like`, `typical`, `feb-2025-like`, `beyond-observed`, or a number from 0.25 to 3.0, calibrated from the two storms in the damage data. The map can also take severity from real weather (Open-Meteo wind gusts), live or replayed for a past date; see `docs/api.md`, "Weather".
 
 ### 6.2 Outage risk model
-- One row per asset / line segment / circuit; label = damaged in past events.
-- Candidate features: asset type, primary vs. secondary, line length/exposure, nearby historical damage density, substation/district, downstream customer count, storm severity.
-- Model: logistic regression or gradient boosting; feature importance powers the "top factors".
-- **Customer risk is roughly the chance that any device in their upstream chain fails.**
-- Output: risk band + confidence (based on data volume and model agreement).
+- A transparent score per premise built from damage history, asset and service type, position on the line and storm severity (`backend/concierge/risk/`). Band cut points come from the two storms in the data (`artifacts/risk/calibration.json`). The `top factors` come from the score's own terms. The backtest calibrates on Sep 2024 and tests on Feb 2025.
+- Each map area is rated through one typical home in it (the median-risk premise). Other homes in the area can differ, and the app says so.
+- Output: risk band + confidence (based on the number of damage records behind the rating). When data is thin the engine returns a fallback instead of a band.
 
 ### 6.3 Restoration-time estimate
-- Effort = labor hours by damage type (STORMS) x quantity.
-- Adjust with travel and nonproductive-time multipliers.
-- Divide by crews available; report a range (optimistic to pessimistic).
-- Use topology for step restoration: upstream repairs restore many customers first.
-- Clearly labeled as a **model estimate, not a confirmed utility ETA**.
+- Effort = labor hours by asset type from the labor workbook, plus access adders and the indirect multiplier (travel and nonproductive time).
+- A seeded Monte Carlo simulation over a restoration tree (devices between the substation and the customer) with crews as one pool working down a priority list. Reports P50 and P90 and the steps in which service returns.
+- Spreads (labor hours, crew presence, working hours per day) are **stated assumptions**, not fitted values.
+- Labeled everywhere as a **model estimate, not a confirmed utility ETA**.
 
 ### 6.4 Repair prioritization
-Priority = (customers restored + critical-facility bonus) / estimated repair hours.
-- Critical facilities: hospitals, fire stations, ambulance services (shown anonymized).
-- Customers restored per repair comes from the upstream topology.
+Priority = (customers restored + critical-facility bonus) / estimated repair hours. Hospitals, fire stations and ambulance services count toward the bonus but are never shown by name or location; an area only gets a "critical facility nearby" note.
 
-### 6.5 Role of the structure / fuse drawing
-- Maps damage types (fuse, crossarm, insulator, etc.) to parts that need replacing.
-- Fuse banks define protection zones: a fuse fault affects only the customers downstream.
+### 6.5 Alerts
+Rules are data, in `backend/concierge/alerts/rules_table.json` (version `2026-10-24.1`). They are prototype assumptions, not utility policy.
 
-### 6.6 Alerts
-Documented rules (challenge assumptions), for example:
-- High risk -> pre-storm alert via the customer's preferred channel.
-- Critical facility nearby -> earlier alert + escalation.
-- Estimate changes materially -> "estimate updated" message.
+| Risk band | Expected outage under 8 h | 8 to 24 h | 24 to 72 h | 72 h or more |
+| --- | --- | --- | --- | --- |
+| Low | info | info | standard | standard |
+| Medium | standard | standard | elevated | elevated |
+| High | standard | elevated | elevated | priority |
+| Unrated | standard (cautious general level) | | | |
 
-> TODO: finalize thresholds and list them in a table.
+Declared-need rules: any declared need raises the tier one step; declared medical equipment sets at least `elevated`, and `priority` when the P50 is 4 hours or more. Each tier sets pre-storm lead times (for example `standard`: 24 h and 6 h before; `elevated`: 48, 24 and 6 h), the time allowed to confirm an outage, the minimum gap between estimate updates, and channel order. Every decision is written to an audit entry with its inputs and the rules that fired (`GET /alerts/audit`, kept 7 days).
+
+### 6.6 Role of the structure / fuse drawing
+Fuse banks and other protective devices define protection zones in the restoration tree: a fault at a fuse affects only the customers downstream. The PDF itself is image-only and is used as a reference for the asset-type-to-labor mapping (`docs/data-cleaning.md`), not parsed.
 
 ## 7. Responsible AI, Privacy, Safety
 
-- **Uncertainty:** ranges and confidence levels, never false precision.
-- **Fact separation:** confirmed vs. model estimate vs. customer action.
-- **Privacy:** anonymized IDs only; no raw personal data, employee contacts, or exact sensitive-facility locations (critical sites shown as "critical facility nearby").
-- **Safety:** hard-coded safety messages (downed lines, generator CO risk, 911 / utility emergency line) that the LLM cannot override.
-- **Fallback:** when data is thin or confidence is low, say so, give general guidance, and hand off to a human.
-- **Accessibility:** plain-language toggle, large text, screen-reader-friendly output; declared needs change advice without inferring sensitive attributes.
-- **Controls:** input validation, confidence thresholds, audit log of every prediction (inputs, confidence, rules fired).
+- **Uncertainty:** ranges and confidence levels, never false precision. The restoration range is P50 to P90.
+- **Fact separation:** the response has separate `confirmed`, model-estimate and customer-action sections. `confirmed` states that no utility data is connected.
+- **Privacy:** salted opaque tokens only. Map areas cover at least 10 homes. No addresses, raw premise numbers, meter or device ids, circuit labels, or facility names and locations leave the server. The city or ZIP a person types is matched against public tables and dropped, and street addresses are rejected. Declared needs are used for that request only.
+- **Safety:** hard-coded safety messages (downed lines, generator carbon monoxide, 911 and the utility emergency line) that the LLM cannot override. A check raises if a required string is missing.
+- **Fallback:** when the model cannot rate an area, the app says so and tells the customer to prepare as if an outage is possible.
+- **Accessibility:** native controls with labels, live regions on value changes, large touch targets and screen-reader text. Full validation would need manual testing with assistive technologies.
+- **Controls:** input validation (unknown fields rejected, 8 KB body limit), confidence thresholds, an output guard on every model draft, a circuit breaker on the model, and an audit log of alert decisions.
+- **Demo only:** alert sign-ups accept fictional contacts only and nothing is ever sent. The API has **no authentication**; do not expose it beyond a demo.
 
 ## 8. Features
 
-- [ ] Map-based location selection
-- [ ] Risk band + confidence + explanation
-- [ ] Scenario sliders (storm severity, crews, damage)
-- [ ] Restoration range + "what would change this"
-- [ ] Preparation and safety guidance
-- [ ] Alert eligibility + 4 message templates
-- [ ] Priority-location mode
-- [ ] Fallback mode
-- [ ] Audit log
+- [x] Map-based location selection (Leaflet), plus city / ZIP lookup
+- [x] Risk band + confidence + explanation
+- [x] Scenario controls: storm strength (past storms or live weather), crews, access, repair jobs and damage kinds
+- [x] Restoration range + "what would change this"
+- [x] Preparation and safety guidance, with declared-needs tailoring
+- [x] Alert eligibility + four message templates (optionally phrased by a model, with template fallback)
+- [x] Priority-location awareness (critical facility nearby note and alert escalation; sites are never named)
+- [x] Fallback mode (unrated areas, places outside the data)
+- [x] Audit log of alert decisions (API: `GET /alerts/audit`)
+- [x] Backtest and evidence card (`docs/backtest.md`, `GET /evidence`)
+- [ ] Alert sign-up and audit log screens in the web app (API only today)
+- [ ] Chat page storm summary on real data (still a sample)
 
 ## 9. Tech Stack
 
-> TODO: fill in. Suggested: Python (pandas, geopandas, scikit-learn, networkx), Streamlit or React + Leaflet for UI, an LLM API for explanations.
+| Layer | Choice |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, Leaflet. No outside links in the app |
+| API | Python 3.12 Lambda behind an API Gateway HTTP API, one handler (`backend/concierge/api/handler.py`) |
+| Engines | Standard-library Python for risk, restoration, alerts and guidance |
+| Data prep | pyarrow, pyshp, pyproj, openpyxl, h3 (`pyproject.toml`); GeoPandas pipeline in `pipeline/` |
+| LLM | Amazon Bedrock Converse (optional), behind a number guard and a template fallback |
+| Weather | Open-Meteo (wind gusts) |
+| Storage | S3 (raw and clean buckets), DynamoDB (risk rows, demo sign-ups) |
+| Infra | AWS CDK in TypeScript (`infra/`), CloudFront for the web app |
+| Tests | pytest + hypothesis (1,400+ backend tests), `tsc` for the frontend |
+
+API reference: `docs/api.md`. Design history: `openspec/changes/`.
 
 ## 10. Setup and Run
 
+Run the app locally (no AWS needed; the built artifacts must exist under `artifacts/`):
+
 ```bash
-# TODO: replace with real commands
-git clone <repo>
-cd ai-outage-concierge
-pip install -r requirements.txt
-# place data in ./raw/ (Data1.zip, Data2.zip, matched_upstream.zip)
-python prepare_data.py
-streamlit run app.py
+git clone <repo> && cd AEP-Hackathon-2026
+git lfs pull                                   # the shapefile .dbf files
+
+# Use your own Python 3.12 venv outside the repo (the committed .venv is not usable on other machines)
+python3.12 -m venv ~/aep-venv
+~/aep-venv/bin/pip install pyarrow==26.0.0 pyshp==3.1.6 pyproj==3.7.2 openpyxl==3.1.5 h3==4.5.0 certifi
+
+# Build the artifacts once (the same salt must be used for both steps; keep it secret)
+export CONCIERGE_TOKEN_SALT='choose-a-long-random-secret'
+~/aep-venv/bin/python scripts/curate.py --no-drawings
+~/aep-venv/bin/python scripts/build_risk_artifacts.py
+
+# Start the local API on :8787 and the web app on http://localhost:5173
+make dev PY=$HOME/aep-venv/bin/python
 ```
+
+`make dev-api` runs only the API (`scripts/dev_api.py`, bound to 127.0.0.1); then run `npm run dev` in `frontend/` yourself.
+
+Tests:
+
+```bash
+~/aep-venv/bin/pip install pytest==9.1.1 hypothesis==6.170.9
+~/aep-venv/bin/python -m pytest                # about 2 minutes; real-data tests skip without artifacts/
+cd frontend && npm run build                    # typecheck + production build
+```
+
+AWS (needs credentials and review; see `docs/aws-setup.md`): `make ingest etl validate`, `make load-table`, `make deploy`, `make publish-web`, `make smoke`.
 
 ## 11. Demo Script (for judges)
 
-1. Select a location -> show risk band, confidence, top factors.
-2. Move the storm-severity slider -> risk and range update live.
-3. Change crews available -> restoration range updates.
-4. Show preparation guidance and alert eligibility.
-5. Generate a pre-storm and an "estimate updated" message.
-6. Show the privacy/uncertainty panel and trigger the fallback.
-7. Show the backtest (`docs/backtest.md`, `GET /evidence`). Say plainly: Low-risk areas had clearly less damage than average,
-   but High and Medium cannot be told apart, High does not clearly beat the base rate, and the risk bands do not beat a
-   simple circuit-size ranking by more than the uncertainty. The restoration range does not beat a flat one-day baseline either.
+1. Type "Salem" or a Roanoke Valley ZIP, or click an area on the map -> show risk band, confidence, top factors.
+2. Move the storm-strength slider -> the band and range update.
+3. Change crews available, or the number of repair jobs -> the restoration range updates.
+4. Show preparation guidance and tick a declared need; show alert eligibility and the rules that fired.
+5. Show the four stage messages (pre-storm, outage confirmed, estimate updated, restored).
+6. Show the transparency panel; type a place outside the data (for example an Ohio ZIP) to show "not covered" and the forecast-only outlook.
+7. Show the backtest (`docs/backtest.md`, `GET /evidence`). Say plainly: Low-risk areas had clearly less damage than average, but High and Medium cannot be told apart, High does not clearly beat the base rate, and the risk bands do not beat a simple circuit-size ranking by more than the uncertainty. The restoration range does not beat a flat one-day baseline either. About 82% of repairs finished within the predicted P90, close to the 90% a P90 should reach.
 
 ## 12. Limitations and Assumptions
 
-- Storm severity is a scenario by default. With `severity: "weather"` it comes from Open-Meteo wind gusts placed on a two-point scale
-  built from the two storms in the data. That scale is an assumption, not a fitted model, and ignores ice, snow load and rain.
+- Storm severity is a scenario by default. With `severity: "weather"` it comes from Open-Meteo wind gusts placed on a two-point scale built from the two storms in the data. That scale is an assumption, not a fitted model, and ignores ice, snow load and rain.
 - Labor and travel multipliers are representative averages.
-- Estimates are not confirmed utility restoration times. The restoration range (P50 to P90) comes from a seeded
-  simulation whose spreads (labor hours, crew presence) are stated assumptions, not values fitted to observed repairs;
-  the backtest spec checks how well they hold up.
-- The restoration model spreads damage evenly over the sections of a line (section length is not in the data), treats
-  crews as one pool working down a priority list, and starts the clock when crews start (no assessment delay).
-- Backtest (Sep 2024 -> Feb 2025, circuit level, `docs/backtest.md`): the risk bands separate Low from the rest, but the
-  model does not clearly beat the base rate for High or a circuit-size baseline. The restoration range does not beat a flat
-  one-day guess against observed repair days, and it runs much longer than them (the model times a customer's wait, ARCOS records
-  how long each damaged asset took). Only two storms exist, Sep 2024 is mostly repair backlog, crews were never recorded,
-  and repair time is not outage length.
+- Estimates are not confirmed utility restoration times. The restoration range (P50 to P90) comes from a seeded simulation whose spreads (labor hours, crew presence) are stated assumptions, not values fitted to observed repairs; the backtest checks how well they hold up.
+- The restoration model spreads damage evenly over the sections of a line (section length is not in the data), treats crews as one pool working down a priority list, and starts the clock when crews start (no assessment delay).
+- Backtest (Sep 2024 -> Feb 2025, circuit level, `docs/backtest.md`): the risk bands separate Low from the rest, but the model does not clearly beat the base rate for High or a circuit-size baseline. The restoration range does not beat a flat one-day guess against observed repair days, and it runs much longer than them (the model times a customer's wait, ARCOS records how long each damaged asset took). Only two storms exist, Sep 2024 is mostly repair backlog, crews were never recorded, and repair time is not outage length.
+- Coverage is the Roanoke Valley only. Damage is attributed to circuits through alias digits, which are wrong for roughly 18% of in-storm records (see `CLAUDE.md`).
+- The deployed Lambda account quota is 10 concurrent executions. In a 30-call burst test, 20 calls returned API Gateway's 503. Callers should retry after a short wait.
 - Prototype scope: focused and explainable, not a production outage-management system.
 
 ## 13. Future Work
 
 - Fit the weather-to-severity scale on more storms, and use ice and snow load. Crew-tracking integration.
 - Survival-style duration models.
+- Alert sign-up and audit screens in the web app.
 - Multi-language and SMS/voice channels.
 - Real customer-profile integration with proper consent.
 
@@ -187,4 +231,4 @@ Faiz Rabbani, Parker Miconi
 
 ## 15. Acknowledgments
 
-Data and challenge provided by AEP via HackOHI/O 2026.
+Data and challenge provided by AEP via HackOHI/O 2026. Map background: OpenStreetMap contributors. Weather: Open-Meteo.com (CC BY 4.0).

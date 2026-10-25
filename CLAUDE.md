@@ -103,7 +103,7 @@ Load only whitelisted columns from source files.
 ```bash
 # Risk engine (use your own venv, see Environment; <py> = that venv's python)
 <py> -m pip install 'pytest==9.1.1' 'hypothesis==6.170.9'
-<py> -m pytest                                   # 386 tests, ~35 s (real-data restoration tests need artifacts/, see below)
+<py> -m pytest                                   # 1,424 tests, ~105 s (real-data tests need artifacts/, see below)
 CONCIERGE_TOKEN_SALT=<secret> <py> scripts/curate.py --no-drawings            # artifacts/curated (same salt as the next line)
 CONCIERGE_TOKEN_SALT=<secret> <py> scripts/build_risk_artifacts.py --sample   # artifacts/risk, incl. restoration_tree.json and pc/pn on rows
 <py> scripts/profile_restoration.py [--cases --severity typical]              # restoration latency / scenario table
@@ -120,7 +120,7 @@ Do not rerun the pipeline into `curated/` with a different `AEP_TOKEN_KEY` unles
 
 ## Environment
 
-- The root `.venv/` is tracked in git (2,105 files), was built on another machine, and has no working interpreter
+- The root `.venv/` is tracked in git (5,427 files), was built on another machine, and has no working interpreter
   on other checkouts, so `.venv/bin/python` fails there. Make your own venv outside the repo. Python 3.12 matches
   the pipeline and the Lambda runtime, and the risk tests pass on it. Untracking `.venv/` is pending a team decision.
 - The risk engine itself uses only the standard library. Pin exact dependency versions.
