@@ -1318,3 +1318,88 @@
   font-weight: 600;
   color: var(--forecast);
 }
+
+/* Email me this alert ------------------------------------------------------ */
+
+.email-form {
+  margin-top: 20px;
+  padding-top: 4px;
+  border-top: 1px solid var(--aep-gray-border);
+}
+
+.email-form__consent {
+  margin: 10px 0 4px;
+}
+
+.email-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 10px 14px;
+  font-weight: 600;
+  border-left: 4px solid;
+}
+
+.email-status svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.email-status--sent {
+  color: #1f4500;
+  background-color: #eef6e2;
+  border-left-color: var(--aep-green);
+}
+
+.email-status--warn {
+  color: var(--aep-text);
+  background-color: var(--aep-orange-tint);
+  border-left-color: var(--aep-orange);
+}
+
+.email-status--error {
+  color: var(--band-high-ink);
+  background-color: var(--aep-red-tint);
+  border-left-color: var(--aep-red);
+}
+
+/* The email as written: a mail-style box, so it reads as a message and not as another card. */
+.email-preview {
+  margin: 0 0 8px;
+  background-color: #fff;
+  border: 1px solid var(--aep-gray);
+  border-radius: 0.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.email-preview__head {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  background-color: var(--aep-gray-light);
+  border-bottom: 1px solid var(--aep-gray-border);
+}
+
+.email-preview__label {
+  display: inline-block;
+  min-width: 4.5em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--aep-text-muted);
+  text-transform: uppercase;
+}
+
+.email-preview__body {
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  font-family: var(--font);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

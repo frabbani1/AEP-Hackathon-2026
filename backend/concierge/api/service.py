@@ -11,7 +11,9 @@ from statistics import median
 from typing import Any
 
 from ..alerts import audit as alert_audit
+from ..alerts import email_alert
 from ..alerts import enroll as alert_enroll
+from ..alerts import mailer as mailer_mod
 from ..alerts import evaluate as alert_eval
 from ..alerts.delivery import STATUS_NOT_SENT, MockDelivery
 from ..alerts.stores import AlertStore, Clock, MemoryStore, utc_now
@@ -74,9 +76,11 @@ class Concierge:
                  evidence_loader: Callable[[], Mapping | None] | None = None,
                  tree: RestorationTree | None = None, restoration_engine: str | None = None,
                  assistant: Assistant | None = None, zones: ZoneIndex | None = None, weather: OpenMeteo | None = None,
-                 weather_anchors: Mapping | None = None, geocoder: Geocoder | None = None):
+                 weather_anchors: Mapping | None = None, geocoder: Geocoder | None = None,
+                 mailer: mailer_mod.Mailer | None = None):
         self.rows, self.labor = rows, labor
         self.zones = zones
+        self.mailer = mailer
         self.weather = weather
         self.geocoder = geocoder
         self._weather_anchors = weather_anchors
@@ -632,6 +636,51 @@ class Concierge:
             raise Unavailable("Weather could not be loaded right now. Try again in a minute.") from None
         return self._finish({"status": "ok", **wx_outlook.build(place.name, wx, place.lat, place.lon)})
 
+    def alert_email(self, body: Mapping) -> dict:
+        """Email one alert to an address the person typed, and return the exact message so the page can show it.
+
+        Either an outage-map area (`zone_id`, plus the same scenario fields as /zones/assess) or a place with no outage
+        data (`query`, which sends the forecast-only outlook). Needs `consent: true`. The address is used to send this one
+        message: it is not stored, logged or echoed (the reply carries a masked form). With no SMTP settings nothing is
+        sent and the reply says `not_configured`. Rate limits are per address and per server; they are a brake, not
+        authentication."""
+        try:
+            address = mailer_mod.clean_address(body.get("email"))
+        except ValueError as e:
+            raise BadRequest(str(e)) from None
+        if body.get("consent") is not True:
+            raise BadRequest("Tick the box to say you want this email.")
+        has_zone, has_query = body.get("zone_id") is not None, body.get("query") is not None
+        if has_zone == has_query:
+            raise BadRequest("Send either an area (zone_id) or a place (query).")
+
+        rest = {k: v for k, v in body.items() if k not in ("email", "consent")}
+        if has_zone:
+            subject, text = email_alert.for_area(self.zone_assess(rest))
+        else:
+            result = self.outlook(rest)
+            if result.get("status") != "ok":
+                raise BadRequest("We couldn't find that place.")
+            subject, text = email_alert.for_outlook(result)
+
+        out = {"kind": "area" if has_zone else "outlook", "to": mailer_mod.mask_address(address),
+               "from_name": mailer_mod.FROM_NAME, "email": {"subject": subject, "body": text}}
+        if self.mailer is None:
+            return self._finish({**out, "status": "not_configured",
+                                 "message": "Email isn't set up on this server, so nothing was sent. This is what it would say."})
+        try:
+            key = self.mailer.limiter.check(address)
+        except mailer_mod.RateLimited as e:
+            return self._finish({**out, "status": "rate_limited", "message": str(e)})
+        try:
+            self.mailer.send(address, subject, text)
+        except mailer_mod.MailError as e:
+            log.warning("%s", e)
+            return self._finish({**out, "status": "failed",
+                                 "message": "We couldn't send the email just now. Please try again in a minute."})
+        self.mailer.limiter.record(key)
+        return self._finish({**out, "status": "sent", "message": f"Sent to {out['to']}. Check your inbox (and spam)."})
+
     def zone_find(self, body: Mapping) -> dict:
         """The map area for a typed city or ZIP code. The text is compared with public place and ZIP tables only; it is
         not stored, not logged and not echoed back, and no premise token is involved."""
@@ -740,6 +789,10 @@ class Concierge:
         elif route == "outlook":
             _only(body, {"query"})
             return self.outlook(body)
+        elif route == "alerts/email":
+            _only(body, {"email", "consent", "query", "zone_id", "severity", "as_of", "crews", "access", "damage",
+                         "damage_count", "needs", "use_llm"})
+            return self.alert_email(body)
         elif route == "zones/assess":
             _only(body, {"zone_id", "severity", "as_of", "crews", "access", "damage", "damage_count", "needs",
                          "use_llm"})

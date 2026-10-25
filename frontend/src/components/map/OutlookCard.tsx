@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { WeatherOutlook } from "../../api";
 import { InfoIcon, WarningIcon } from "../icons";
+import { EmailAlertForm } from "./EmailAlertForm";
 import "./panel.css";
 
 const num = (value: number | null | undefined, unit: string) =>
@@ -153,6 +154,11 @@ export function OutlookCard({ outlook, onClose }: { outlook: WeatherOutlook; onC
             );
           })}
         </ul>
+      </section>
+
+      <section className="outlook__section">
+        {/* The place name (such as "Dublin, Ohio") looks up the same place again on the server. */}
+        <EmailAlertForm key={place.name} target={{ kind: "outlook", query: place.name }} />
       </section>
 
       <p className="weather-status__credit">

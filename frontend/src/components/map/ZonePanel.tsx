@@ -152,7 +152,12 @@ export function ZonePanel({
       )}
 
       <PrepareCard preparation={data.preparation} needs={needs} onNeedsChange={onNeedsChange} />
-      <AlertsCard alerts={data.alerts} />
+      {/* Keyed by area so a result for one area never sits under another. */}
+      <AlertsCard
+        key={data.zoneId}
+        alerts={data.alerts}
+        emailTarget={{ kind: "area", request: { zoneId: data.zoneId, scenario, declaredNeeds: needs } }}
+      />
 
       {data.messages.length > 0 ? (
         <MessagesCard messages={data.messages} />

@@ -1,9 +1,10 @@
-import type { AlertEligibility } from "../../api";
+import type { AlertEligibility, AlertEmailTarget } from "../../api";
 import { CheckIcon, InfoIcon } from "../icons";
 import { Card, Tag } from "./Card";
+import { EmailAlertForm } from "./EmailAlertForm";
 
 /** "Do I qualify for outage alerts?" The rules that fired, plus timing, channels and escalation. */
-export function AlertsCard({ alerts }: { alerts: AlertEligibility }) {
+export function AlertsCard({ alerts, emailTarget }: { alerts: AlertEligibility; emailTarget: AlertEmailTarget }) {
   return (
     <Card id="alerts" title="Do I qualify for outage alerts?" tag={<Tag kind="rules" />}>
       <p className={alerts.eligible ? "verdict verdict--yes" : "verdict verdict--no"}>
@@ -62,6 +63,8 @@ export function AlertsCard({ alerts }: { alerts: AlertEligibility }) {
       )}
 
       {alerts.note && <p className="card__muted">{alerts.note}</p>}
+
+      <EmailAlertForm target={emailTarget} />
     </Card>
   );
 }

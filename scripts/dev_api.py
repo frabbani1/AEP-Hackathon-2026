@@ -8,12 +8,16 @@ restoration_tree.json, zones.json, labor_standards.json, and backtest.json when 
 alert sign-ups live in memory, and the assistant writes from templates unless you pass --assistant-model, which needs
 AWS credentials and BEDROCK_MODEL_ID.
 
+Real emails ("email me this alert") need SMTP settings. Put SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASSWORD in
+`.env.local` at the repo root (git-ignored) or export them. Without them the button shows the email and says nothing was sent.
+
 Binds to 127.0.0.1 only and handles one request at a time. The API has no authentication, so do not expose this
 port. The frontend dev server proxies /api to it (frontend/vite.config.ts, VITE_API_PROXY).
 """
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import os
 import sys
@@ -46,6 +50,24 @@ def set_defaults(artifacts: Path) -> None:
                        ("TREE_FILE", risk / "restoration_tree.json"), ("ZONES_FILE", risk / "zones.json"),
                        ("LABOR_FILE", curated / "labor_standards.json"), ("EVIDENCE_FILE", backtest / "backtest.json")):
         os.environ.setdefault(name, str(path))
+
+
+def load_env_file(path: Path) -> list[str]:
+    """Read KEY=VALUE lines from a local settings file (`.env.local`, git-ignored) into the environment. Variables already
+    set in the shell win. Returns the names it set, never the values, so nothing secret is printed."""
+    if not path.is_file():
+        return []
+    names = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip().removeprefix("export ").strip(), value.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = value
+            names.append(key)
+    return names
 
 
 def trust_system_certs() -> None:
@@ -105,6 +127,7 @@ def main() -> int:
     ap.add_argument("--artifacts", type=Path, default=ROOT / "artifacts")
     ap.add_argument("--assistant-model", action="store_true", help="call Bedrock (needs credentials and BEDROCK_MODEL_ID)")
     args = ap.parse_args()
+    load_env_file(ROOT / ".env.local")
     set_defaults(args.artifacts)
     trust_system_certs()
     if not args.assistant_model:
@@ -116,9 +139,23 @@ def main() -> int:
         return 1
     from concierge.api.handler import lambda_handler, service
     service()                                    # load everything now, so the first request is not slow
-    server = HTTPServer(("127.0.0.1", args.port), make_handler(lambda_handler))
+    try:
+        server = HTTPServer(("127.0.0.1", args.port), make_handler(lambda_handler))
+    except OSError as e:
+        if e.errno != errno.EADDRINUSE:
+            raise
+        print(f"\nPort {args.port} is already in use, so the API is probably already running (an earlier `make dev`).\n"
+              f"  - To use it, just open http://localhost:5173\n"
+              f"  - To restart it, stop the old one first:\n"
+              f"      lsof -nP -iTCP:{args.port} -sTCP:LISTEN     (note the PID)\n"
+              f"      kill <PID>\n"
+              f"  - Or run on another port: scripts/dev_api.py --port 8790 (and set VITE_API_PROXY=http://127.0.0.1:8790)",
+              file=sys.stderr)
+        return 1
     print(f"zones: {os.environ['ZONES_FILE']}\nevidence: {os.environ['EVIDENCE_FILE']}"
           f"{'' if Path(os.environ['EVIDENCE_FILE']).exists() else '  (missing: /evidence will be unavailable)'}")
+    print("email alerts: " + ("ON (SMTP settings found)" if service().mailer is not None else
+                              "off (add SMTP_HOST, SMTP_USER, SMTP_PASSWORD to .env.local to send real emails)"))
     print(f"API on http://127.0.0.1:{args.port}  (try: curl -s -X POST localhost:{args.port}/zones -d '{{}}')")
     try:
         server.serve_forever()

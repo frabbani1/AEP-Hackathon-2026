@@ -27,6 +27,7 @@ Errors look like `{"error": {"code": "bad_request", "message": "..."}}`.
 | `POST /zones` | `severity?` (also `weather`), `as_of?` | the outage map: every area's outline, risk band and confidence for one storm scenario, and the smallest group of homes an area may cover. With `severity: "weather"` each area uses the weather at its own location (see "Weather"). `503` until `zones.json` is published |
 | `POST /zones/find` | `query` (a city or 5-digit ZIP code) | `status: "found"` with the area (`zone_id`, `zone_name`, `match`, `exact`, `nearby`), or `status: "not_covered"` with `covered_places`. Street addresses are rejected with `400`. The text is compared with public place and ZIP tables, then dropped: it is not stored, logged or echoed. See "Outage map" |
 | `POST /zones/assess` | `zone_id`, `severity?` (also `weather`), `as_of?`, `needs?`, `crews?`, `access?`, `damage?` or `damage_count?`, `use_llm?` (default `false`) | all four answers for one area in the shape the map shows: risk, restoration (P50 to P90, steps, what moves it), preparation, alert level and eligibility, four sample messages, assumptions. See "Outage map" |
+| `POST /alerts/email` | `email`, `consent`, `zone_id` (+ scenario fields) or `query` | sends one real email over SMTP and returns its text and a `status` (`sent`, `not_configured`, `failed`, `rate_limited`). Address not stored or logged. See "Email me this alert" |
 | `POST /outlook` | `query` (a US city or 5-digit ZIP code) | a **forecast-only outlook** for a place with no outage data: `status: "ok"` with `label: "Prediction only"`, a four-step weather `outlook.level` (`quiet`, `watch`, `elevated`, `high`), forecast facts, hazards, general preparation, and `not_available` (outage risk rating, restoration time, alert eligibility). `status: "not_found"` when nothing matches; `400` for a street address; `503` if the place lookup or weather is down. See "Forecast-only outlook" |
 | `POST /weather` | `zone_id`, `as_of?` | current conditions, the last 24 hours and the next 48 hours for one area (or 48 hours from a past date), hazards, and the storm strength they imply. `503` if Open-Meteo does not answer. See "Weather" |
 | `POST /summary` | same as `/alerts` | risk + restoration + guidance + alerts in one call (one premise-table read, plus one alerts-table read for the sign-up) |
@@ -171,6 +172,30 @@ The map shows areas, the engines take premise tokens. `zones.json` (built by `co
 - Build: `scripts/build_risk_artifacts.py` and `scripts/etl.py` write `zones.json` when the clean tables include `hex_context`.
   Run `make etl` and upload before the map routes work in the cloud. Locally, `scripts/dev_api.py` serves the handler on
   127.0.0.1:8787 and the Vite dev server proxies `/api` to it.
+
+## Email me this alert (`POST /alerts/email`)
+
+Sends **one real email** to an address the person types, and returns the exact text so the page can show it. It is separate from
+the demo sign-up (`/alerts/enroll`), which only accepts fictional contacts and sends nothing.
+
+- **Body.** `email`, `consent` (must be exactly `true`), and either an area (`zone_id`, plus the same scenario fields as
+  `/zones/assess`, so the email matches what is on screen) or a place with no outage data (`query`, which sends the
+  forecast-only outlook, labeled "PREDICTION ONLY"). Both together, or neither, is a `400`. No caller-written text goes into the email.
+- **Reply.** `status` is `sent`, `not_configured`, `failed` or `rate_limited`, plus `message`, `kind`, `to` (masked, such as
+  `f***@gmail.com`), `from_name` and `email` (`subject`, `body`). The email is always returned, even when it was not sent.
+- **Content.** Built by `concierge/alerts/email_alert.py` from the answers the map already shows: pre-storm message, risk band,
+  restoration range, preparation, safety. Fixed wording, plain text, no links, no model.
+- **Settings.** `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, and optionally `SMTP_PORT` (587 STARTTLS by default, or 465 SSL) and
+  `SMTP_FROM`. Locally, put them in `.env.local` at the repo root (git-ignored); `scripts/dev_api.py` reads it. With Gmail: turn
+  on 2-step verification, create an app password, then `SMTP_HOST=smtp.gmail.com`, `SMTP_USER=you@gmail.com`,
+  `SMTP_PASSWORD=<the 16 characters>`. Without settings nothing is sent and the reply is `not_configured`.
+- **Privacy.** The address is used to send that one message. It is not stored, cached, logged or echoed. Only a salted hash is
+  held in memory to count sends. Mail-server errors are logged by type only.
+- **Abuse limits.** The API has no authentication, so anyone who can reach it can ask for an email. Fixed content, the consent
+  flag, 3 emails per address per hour and 30 per server per hour limit the harm. Counts are per process (per Lambda instance).
+  This is a brake, not access control. **The route is not in the CDK stack on purpose**: to put it on the public API, add
+  `"alerts/email"` to the route list in `infra/lib/stack.ts`, set the `SMTP_*` variables on the Lambda (from Secrets Manager, not
+  plain text), and consider SES and real authentication first.
 
 ## Forecast-only outlook (`POST /outlook`)
 

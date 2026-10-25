@@ -1,4 +1,5 @@
-"""Guards that keep the demo from ever sending anything real, plus parity with the old (v1) alert rules."""
+"""Guards that keep the demo from sending anything real except the one opt-in email (`alerts/mailer.py`), plus parity with
+the old (v1) alert rules."""
 import re
 from pathlib import Path
 
@@ -22,11 +23,27 @@ def test_no_permission_to_send_real_messages_is_granted(rel):
     assert not FORBIDDEN_IAM.search(text), f"{rel} mentions a messaging permission"
 
 
+# The one module allowed to import smtplib: "email me this alert" sends a single email the person asked for, to the address
+# they typed, after they ticked a consent box (see docs/api.md, "Email me this alert"). Every other module, and every other
+# messaging library and client, stays forbidden, so nothing else can send anything real.
+SMTP_ALLOWED = BACKEND / "alerts" / "mailer.py"
+SMTP_IMPORT = re.compile(r"^\s*(?:import|from)\s+smtplib\b", re.M)
+
+
 def test_no_messaging_client_is_created_or_imported():
     for path in BACKEND.rglob("*.py"):
         text = path.read_text()
         assert not FORBIDDEN_CLIENTS.search(text), f"{path} creates a messaging client"
+        if path == SMTP_ALLOWED:
+            text = SMTP_IMPORT.sub("", text)               # smtplib is allowed here, and only here
         assert not FORBIDDEN_IMPORTS.search(text), f"{path} imports a messaging library"
+
+
+def test_only_the_mailer_imports_smtplib_and_only_the_email_route_calls_it():
+    importers = [p for p in BACKEND.rglob("*.py") if SMTP_IMPORT.search(p.read_text())]
+    assert importers == [SMTP_ALLOWED]
+    callers = [p for p in BACKEND.rglob("*.py") if p != SMTP_ALLOWED and re.search(r"\bmailer\.send\(", p.read_text())]
+    assert callers == [BACKEND / "api" / "service.py"]
 
 
 def test_delivery_module_only_touches_the_store():

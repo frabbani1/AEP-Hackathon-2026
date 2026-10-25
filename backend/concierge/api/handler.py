@@ -19,6 +19,8 @@ Routes (POST unless noted; also reachable under /api/ when served through CloudF
   POST /zones/assess     {zone_id, severity?, needs?, crews?, access?, damage? | damage_count?, use_llm?}
                                                          all four answers for one area (no premise token leaves the server)
   POST /weather          {zone_id, as_of?}               current weather and forecast for an area, or a past date
+  POST /alerts/email     {email, consent, zone_id|query, ...}   send ONE real email (SMTP_* settings) and return its text;
+                                                         address not stored or logged; without SMTP settings nothing is sent
   POST /outlook          {query}                         forecast-only outlook for a US city or ZIP outside the outage
                                                          data: prediction only, no risk band, restoration time or alerts
 
@@ -39,7 +41,8 @@ log.setLevel(logging.INFO)
 
 MAX_BODY_BYTES = 8 * 1024
 ROUTES = {"risk", "restoration", "guidance", "alerts", "messages", "summary", "assistant", "alerts/enroll",
-          "alerts/unenroll", "alerts/simulate", "zones", "zones/find", "zones/assess", "weather", "outlook"}
+          "alerts/unenroll", "alerts/simulate", "alerts/email", "zones", "zones/find", "zones/assess", "weather",
+          "outlook"}
 GET_ROUTES = {"alerts/audit"}
 _service: Concierge | None = None
 
@@ -73,10 +76,11 @@ def _build() -> Concierge:
         from ..weather.geocode import Geocoder
         from ..weather.openmeteo import OpenMeteo
         weather, geocoder = OpenMeteo(), Geocoder()
+    from ..alerts import mailer
     return Concierge(store.load_rows(), store.load_calibration(), store.load_labor(), phraser, model_id,
                      alert_store=alert_store, evidence_loader=store.load_evidence, tree=tree,
                      restoration_engine=engine, assistant=assistant, zones=store.load_zones(), weather=weather,
-                     geocoder=geocoder)
+                     geocoder=geocoder, mailer=mailer.from_env())
 
 
 def service() -> Concierge:

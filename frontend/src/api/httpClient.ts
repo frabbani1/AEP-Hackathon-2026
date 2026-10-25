@@ -1,5 +1,6 @@
 import type {
   AccessCondition,
+  AlertEmailResult,
   ConciergeClient,
   DamageKind,
   DeclaredNeed,
@@ -117,9 +118,18 @@ async function call<T>(path: string, init: { method: "GET" | "POST"; body?: unkn
   return camelize<T>(await response.json());
 }
 
-type ApiMethods = Pick<ConciergeClient, "getMapZones" | "getZoneAssessment" | "getEvidence" | "findArea" | "getOutlook">;
+type ApiMethods = Pick<
+  ConciergeClient,
+  "getMapZones" | "getZoneAssessment" | "getEvidence" | "findArea" | "getOutlook" | "sendAlertEmail"
+>;
 
 export const httpClient: ApiMethods = {
+  sendAlertEmail(email, target, signal) {
+    // Consent is always sent as true because the form will not submit without the box ticked.
+    const content = target.kind === "area" ? assessmentBody(target.request) : { query: target.query };
+    return call<AlertEmailResult>("/alerts/email", { method: "POST", body: { ...content, email, consent: true } }, signal);
+  },
+
   getOutlook(query, signal) {
     return call<OutlookResult>("/outlook", { method: "POST", body: { query } }, signal);
   },
