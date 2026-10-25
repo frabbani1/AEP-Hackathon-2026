@@ -1,0 +1,223 @@
+{
+ "version": "2026-10-24.1",
+ "description": "Prototype alert rules (assumptions, not utility policy). Edit this file to change behavior.",
+ "tiers": [
+  "info",
+  "standard",
+  "elevated",
+  "priority"
+ ],
+ "duration_buckets": {
+  "short_below_hours": 8,
+  "medium_below_hours": 24,
+  "long_below_hours": 72
+ },
+ "base_tier": {
+  "Low": {
+   "short": {
+    "tier": "info",
+    "reason": "Low risk and a short expected outage."
+   },
+   "medium": {
+    "tier": "info",
+    "reason": "Low risk and an outage of several hours."
+   },
+   "long": {
+    "tier": "standard",
+    "reason": "Low risk and a day or longer expected outage."
+   },
+   "extended": {
+    "tier": "standard",
+    "reason": "Low risk and a multi-day expected outage."
+   },
+   "unknown": {
+    "tier": "info",
+    "reason": "Low risk and no restoration estimate."
+   }
+  },
+  "Medium": {
+   "short": {
+    "tier": "standard",
+    "reason": "Moderate risk and a short expected outage."
+   },
+   "medium": {
+    "tier": "standard",
+    "reason": "Moderate risk and an outage of several hours."
+   },
+   "long": {
+    "tier": "elevated",
+    "reason": "Moderate risk and a day or longer expected outage."
+   },
+   "extended": {
+    "tier": "elevated",
+    "reason": "Moderate risk and a multi-day expected outage."
+   },
+   "unknown": {
+    "tier": "standard",
+    "reason": "Moderate risk and no restoration estimate."
+   }
+  },
+  "High": {
+   "short": {
+    "tier": "standard",
+    "reason": "Higher risk and a short expected outage."
+   },
+   "medium": {
+    "tier": "elevated",
+    "reason": "Higher risk and an outage of several hours."
+   },
+   "long": {
+    "tier": "elevated",
+    "reason": "Higher risk and a day or longer expected outage."
+   },
+   "extended": {
+    "tier": "priority",
+    "reason": "Higher risk and a multi-day expected outage."
+   },
+   "unknown": {
+    "tier": "elevated",
+    "reason": "Higher risk and no restoration estimate."
+   }
+  },
+  "Unrated": {
+   "unknown": {
+    "tier": "standard",
+    "reason": "We could not rate the risk for this location, so we use a cautious general level."
+   }
+  }
+ },
+ "needs_rules": {
+  "N1": {
+   "reason": "A need you declared raises the alert level one step.",
+   "step": 1
+  },
+  "N2": {
+   "reason": "A declared medical-equipment need sets the alert level to at least elevated.",
+   "min_tier": "elevated"
+  },
+  "N3": {
+   "reason": "A declared medical-equipment need with an outage of several hours (or no reliable rating) sets the highest level.",
+   "min_tier": "priority",
+   "min_p50_hours": 4
+  }
+ },
+ "tier_behavior": {
+  "info": {
+   "pre_storm_lead_hours": [],
+   "outage_confirmed_within_minutes": 15,
+   "estimate_update_min_gap_hours": 6,
+   "channel_order": [
+    "push",
+    "email"
+   ],
+   "reason": "Basic level: outage and restoration alerts, storm alerts only if you opt in."
+  },
+  "standard": {
+   "pre_storm_lead_hours": [
+    24,
+    6
+   ],
+   "outage_confirmed_within_minutes": 10,
+   "estimate_update_min_gap_hours": 4,
+   "channel_order": [
+    "sms",
+    "push",
+    "email"
+   ],
+   "reason": "Standard level: storm alert the day before and again closer to the storm."
+  },
+  "elevated": {
+   "pre_storm_lead_hours": [
+    48,
+    24,
+    6
+   ],
+   "outage_confirmed_within_minutes": 5,
+   "estimate_update_min_gap_hours": 2,
+   "channel_order": [
+    "sms",
+    "push",
+    "voice",
+    "email"
+   ],
+   "reason": "Elevated level: earlier and more frequent alerts."
+  },
+  "priority": {
+   "pre_storm_lead_hours": [
+    72,
+    48,
+    24,
+    6
+   ],
+   "outage_confirmed_within_minutes": 2,
+   "estimate_update_min_gap_hours": 1,
+   "channel_order": [
+    "voice",
+    "sms",
+    "push",
+    "email"
+   ],
+   "reason": "Priority level: earliest alerts, fastest updates, voice first."
+  }
+ },
+ "eligibility": {
+  "K-pre": {
+   "reason": "Your alert level qualifies you for storm alerts."
+  },
+  "K-pre-unrated": {
+   "reason": "We can't rate your risk, so we send a general storm alert to be safe."
+  },
+  "K-pre-optin": {
+   "reason_opted_in": "Your alert level is basic, and you opted in to storm alerts.",
+   "reason_not_opted_in": "Your area is rated lower for this scenario. You can still opt in to storm alerts."
+  },
+  "K-out": {
+   "reason": "Every enrolled customer is alerted when an outage is confirmed."
+  },
+  "K-upd": {
+   "min_change_hours": 2,
+   "min_change_fraction": 0.25,
+   "reason_changed": "The estimate moved enough to be worth telling you about.",
+   "reason_small": "The estimate has not changed enough to send another message.",
+   "reason_recent": "We sent an update recently, so we wait before sending another.",
+   "reason_no_prior": "You get an update when the estimate changes by a meaningful amount."
+  },
+  "K-restored": {
+   "reason": "Every enrolled customer is told when power is restored."
+  }
+ },
+ "escalation": {
+  "E1": {
+   "min_p50_hours": 24,
+   "action": "customer_care_follow_up",
+   "reason": "The typical estimate is a day or longer, so a person should follow up."
+  },
+  "E2": {
+   "min_p50_hours": 4,
+   "action": "priority_outreach",
+   "reason": "A declared medical-equipment need plus an outage of several hours (or no reliable estimate) calls for priority outreach."
+  },
+  "E3": {
+   "min_p90_hours": 72,
+   "action": "community_resources",
+   "reason": "The high end of the range reaches several days, so share shelter and resource information."
+  },
+  "E4": {
+   "min_p90_over_p50_ratio": 4.0,
+   "min_p90_minus_p50_hours": 24,
+   "action": "human_review",
+   "reason": "The estimate range is very wide, in both relative and absolute terms, so a person should review it before it is shared."
+  },
+  "E5": {
+   "min_p50_hours": 24,
+   "action": "resource_outreach",
+   "reason": "You declared a need and the typical estimate is a day or longer, so resource outreach is recommended."
+  }
+ },
+ "assumptions": [
+  "These alert rules are prototype assumptions, not utility policy.",
+  "Needs are only the ones you declared. We do not guess them.",
+  "Escalations are recommendations for a person to act on, not automatic actions.",
+  "The alert level is a prototype level for this demo, not a service commitment."
+ ]
+}

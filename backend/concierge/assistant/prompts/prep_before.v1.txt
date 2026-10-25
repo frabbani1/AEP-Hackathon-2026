@@ -1,0 +1,5 @@
+Task: write a short introduction and rephrase the preparation items for this customer's situation.
+
+You are given a list of items, each with an id and fixed text. Rephrase every item in one or two short sentences, each under about fifteen words, in a friendly, plain way that fits the card. Keep the meaning the same. You must return every item, once, in the same order, with the same id. Do not add, remove, merge or reorder items. The intro is one or two short sentences about the risk for this scenario. If the card has a range you may mention it once in the intro with {{range}} and call it an estimate.
+
+Output shape: {"intro": "<intro>", "items": [{"id": "<same id>", "text": "<rephrased item>"}]}

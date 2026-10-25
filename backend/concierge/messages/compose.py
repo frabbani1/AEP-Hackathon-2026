@@ -10,15 +10,13 @@ import logging
 import re
 from collections.abc import Callable, Mapping
 
+from .templates import (BAND_WORDS, CHANNEL_LIMITS, MESSAGE_TYPES, SAFETY_LINE, SAFETY_TYPES,  # noqa: F401
+                        SCENARIO_WORDS, render)
+
 log = logging.getLogger("concierge.messages")
 ENGINE_VERSION = "messages-v1"
 
-MESSAGE_TYPES = ("pre_storm", "outage_confirmed", "estimate_updated", "restoration_complete")
-CHANNEL_LIMITS = {"sms": 480, "push": 200, "email": 1000, "voice": 500}
 ESTIMATE_TYPES = {"pre_storm", "outage_confirmed", "estimate_updated"}
-SAFETY_LINE = "If you see a downed power line, stay far away and call 911."
-SAFETY_TYPES = {"pre_storm", "outage_confirmed"}
-BAND_WORDS = {"High": "higher", "Medium": "moderate", "Low": "lower"}
 
 # Fact-card keys the model may see. Nothing free-form from the customer is ever included.
 FACT_KEYS = ("message_type", "channel", "risk_level", "storm_scenario", "estimate_display", "prior_estimate_display",
@@ -45,9 +43,6 @@ _BAD_PATTERNS = [
     (re.compile(r"\b(moderate|higher|lower|high|low)[- ](risk )?storm\b", re.I), "risk level described as storm strength"),
 ]
 
-SCENARIO_WORDS = {"sep-2024-like": "a milder storm like September 2024", "typical": "a typical storm",
-                  "feb-2025-like": "a stronger storm like February 2025", "beyond-observed": "a storm stronger than any we have seen",
-                  "custom": "the storm strength you chose"}
 
 
 def numbers_in(text: str) -> set[str]:
@@ -123,36 +118,8 @@ def fact_card(*, message_type: str, channel: str, band: str | None, scenario: st
 
 
 def template(card: Mapping) -> str:
-    t, short = card["message_type"], card["channel"] == "push"
-    est, prior, risk = card["estimate_display"], card["prior_estimate_display"], card["risk_level"]
-    if t == "pre_storm":
-        if not card["can_rate"]:
-            return ("Storm alert: we can't rate your outage risk, so please prepare as if an outage is possible. "
-                    "Charge devices and gather supplies now.") if not short else \
-                   "Storm alert: prepare for a possible outage. Charge devices now."
-        if short:
-            tail = f" If you lose power, estimate: {est}." if est else ""
-            return f"Storm alert: {risk} outage risk in {card['storm_scenario']}.{tail}"
-        base = f"Storm alert: your area has a {risk} chance of power outages in {card['storm_scenario']}."
-        if est:
-            base += f" If you lose power, our model estimates restoration could take {est}."
-        return base + " Charge devices and gather supplies now."
-    if t == "outage_confirmed":
-        if est:
-            return (f"We confirmed an outage at your location. Our estimate for restoring power is {est}. "
-                    "This is a model estimate, not a confirmed time. We will update you.") if not short else \
-                   f"Outage confirmed. Estimated restoration: {est}. This is an estimate."
-        return "We confirmed an outage at your location. We don't have a reliable estimate yet and will update you."
-    if t == "estimate_updated":
-        if est and prior:
-            return (f"Update: our estimate for restoring your power is now {est}, changed from {prior}. "
-                    "This is still an estimate, not a confirmed time.") if not short else \
-                   f"Estimate updated: {est} (was {prior}). Still an estimate."
-        if est:
-            return f"Update: our estimate for restoring your power is now {est}. This is an estimate, not a confirmed time."
-        return "Update: we are still working on an estimate for your outage and will share it when we have one."
-    return ("Power has been restored at your location. If your power is still out, please report it. "
-            "Stay away from any downed lines.") if not short else "Power is restored. If it is still out, please report it."
+    """Fixed fallback text. The canonical wording lives in messages/templates.py."""
+    return render(card)
 
 
 SYSTEM_PROMPT = (

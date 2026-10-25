@@ -152,6 +152,9 @@ streamlit run app.py
 4. Show preparation guidance and alert eligibility.
 5. Generate a pre-storm and an "estimate updated" message.
 6. Show the privacy/uncertainty panel and trigger the fallback.
+7. Show the backtest (`docs/backtest.md`, `GET /evidence`). Say plainly: Low-risk areas had clearly less damage than average,
+   but High and Medium cannot be told apart, High does not clearly beat the base rate, and the risk bands do not beat a
+   simple circuit-size ranking by more than the uncertainty. The restoration range does not beat a flat one-day baseline either.
 
 ## 12. Limitations and Assumptions
 
@@ -162,6 +165,11 @@ streamlit run app.py
   the backtest spec checks how well they hold up.
 - The restoration model spreads damage evenly over the sections of a line (section length is not in the data), treats
   crews as one pool working down a priority list, and starts the clock when crews start (no assessment delay).
+- Backtest (Sep 2024 -> Feb 2025, circuit level, `docs/backtest.md`): the risk bands separate Low from the rest, but the
+  model does not clearly beat the base rate for High or a circuit-size baseline. The restoration range does not beat a flat
+  one-day guess against observed repair days, and it runs much longer than them (the model times a customer's wait, ARCOS records
+  how long each damaged asset took). Only two storms exist, Sep 2024 is mostly repair backlog, crews were never recorded,
+  and repair time is not outage length.
 - Prototype scope: focused and explainable, not a production outage-management system.
 
 ## 13. Future Work

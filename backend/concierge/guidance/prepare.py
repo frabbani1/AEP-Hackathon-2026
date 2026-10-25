@@ -28,8 +28,8 @@ CORE_ITEMS = [
     ("unplug", "power", "Unplug sensitive electronics, and leave one lamp on so you notice when power returns.", 1, 0),
     ("cash_fuel", "supplies", "Keep some cash on hand and do not let your car's fuel tank run low.", 1, 2),
     ("check_in", "community", "Arrange to check on neighbors, and ask someone to check on you.", 1, 2),
-    ("shelter_plan", "shelter", "Know where you could stay warm or cool if the outage runs long, "
-                                "such as a friend's home or a community shelter.", 2, 2),
+    ("shelter_plan", "shelter", "Know where you could stay warm or cool if the outage runs long. "
+                                "A friend's home or a community shelter could work.", 2, 2),
 ]
 NEED_ITEMS = {
     "medical_equipment": [

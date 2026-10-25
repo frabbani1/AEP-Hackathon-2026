@@ -12,7 +12,8 @@ Status: `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, t
 review, is open), `spec-02-risk-engine` and `spec-03-restoration-engine` (7.4, removing the one-release `low/typical/high_hours`
 shim, waits for spec-05 and spec-06) are implemented. The frontend has two pages (chat home at `/`, outage
 map at `/map`, see `frontend/`) running on a mock client. The map page shows clearly labeled sample data
-(`frontend/src/api/sample/`), not engine output. No API, Bedrock or CDK code exists yet.
+(`frontend/src/api/sample/`), not engine output.
+Spec-05 (alerts) and spec-06 (assistant) are implemented; open items are listed in their `tasks.md` (team reviews, deploy-time checks).
 The two backends do not talk to each other yet (see "Circuit keys" and `pipeline/README.md`). Work is driven by
 OpenSpec changes in `openspec/changes/`.
 
@@ -44,6 +45,7 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `backend/concierge/risk/` | Risk engine: loaders, storms, features, calibration, confidence, explanation, engine, build. Reads `data/` directly, not `curated/` |
 | `backend/tests/risk/` | Unit, property (hypothesis), synthetic-fixture, integration, and real-data tests |
 | `backend/concierge/restoration/` | Restoration engine v2: `config` (assumptions), `jobs` (pricing, plan), `tree` (runtime tree), `schedule` (step restoration), `montecarlo` (seeded P50/P90), `model` (contract, `RESTORATION_ENGINE` switch), `v1` (frozen first version). Tree builder: `backend/concierge/curate/restoration_tree.py`. Rules in `docs/restoration-tree.md` |
+| `backend/concierge/assistant/` | Spec-06 assistant: `factcard` (card, digit-free projection, sanitizer), `guard` (output rules), `compose` (orchestration), `phrase` (Bedrock Converse, breaker), `cache`, `safety` (hard-coded safety text), `fallbacks`, `prompts/` (8 versioned prompts). Route `POST /assistant`. Tests in `backend/tests/assistant/` |
 | `backend/tests/restoration/` | Golden v1 tests, tree/jobs/scheduler/Monte Carlo/model/service tests, real-data checks (skipped without `artifacts/`) |
 | `scripts/profile_restoration.py` | Latency and scenario-table report for the restoration engine on the real artifacts |
 | `frontend/` | React + TS + Vite, styled after aepohio.com. Pages: chat home and outage map (Leaflet). `src/api/types.ts` is the API contract; `src/api/mockClient.ts` is the stub to replace; `src/api/sample/` is placeholder map data to delete. `VITE_BASEMAP_URL` (empty = no tiles) sets the map background. `npm run dev` / `npm run build` |

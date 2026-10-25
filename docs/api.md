@@ -12,13 +12,19 @@ Errors look like `{"error": {"code": "bad_request", "message": "..."}}`.
 
 | Route | Body | Returns |
 | --- | --- | --- |
-| `GET /health` | none | status, engine hash, message model |
+| `GET /health` | none | status, engine hash, message model, assistant circuit-breaker state (`closed`, `open`, `half_open`, or `null` when no model is configured) |
 | `POST /risk` | `token`, `severity?` | risk band, score, confidence, top factors, assumptions, fallback |
 | `POST /restoration` | `token`, `severity?`, `crews?`, `access?`, `damage?` or `damage_count?` | restoration range (P50 to P90), step-by-step stages, what-if changes, assumptions |
 | `POST /guidance` | `token`, `severity?`, `needs?`, plus restoration inputs | preparation list with safety items first |
-| `POST /alerts` | `token`, `severity?`, `needs?`, `channels?`, `prior_typical_hours?`, plus restoration inputs | eligibility per message type, timing, channels, escalation recommendations |
+| `POST /alerts` | `token`, `severity?`, `needs?`, `channels?`, `prior_typical_hours?`, `hours_until_storm?`, `hours_since_last_update?`, `opt_in?`, plus restoration inputs | alert level (tier), eligibility per message type, timing, channels, escalation recommendations, `rules_fired`, `decision_id` |
+| `POST /alerts/enroll` | `token`, `channels` (`[{type, value}]`), `needs?`, `message_types?` | demo sign-up with masked contacts. **Fictional contacts only** |
+| `POST /alerts/unenroll` | `token` | deletes the demo sign-up and its mock messages |
+| `POST /alerts/simulate` | `token`, `event`, `use_llm?`, `prior_typical_hours?`, `prior_estimate?`, `hours_until_storm?`, plus restoration inputs | records one mock message in the outbox (`not_sent_demo`) or says why nothing was recorded |
+| `GET /alerts/audit?token=p_...` | none | latest 50 alert decisions for that token (inputs, rules fired, outputs) |
+| `GET /evidence` | none | backtest headline numbers, rule-generated verdicts (`supports`, `mixed`, `does_not_support`, `not_testable`), plot locations, and the six-item limits list. `status` is `unavailable` until a reviewed `backtest.json` is uploaded. Aggregates only, no identifiers |
 | `POST /messages` | `token`, `message_type`, `channel?`, `severity?`, `needs?`, `use_llm?`, `prior_estimate?` | one customer message and how it was produced |
-| `POST /summary` | same as `/alerts` | risk + restoration + guidance + alerts in one call (one DynamoDB read) |
+| `POST /assistant` | `token`, `kind`, `channel?`, `stage?`, `severity?`, `needs?`, `use_llm?`, `prior_estimate?`, plus restoration inputs | one of eight kinds of plain-language text, with separate sections for confirmed facts, model estimates and customer actions, and its provenance (see "Assistant") |
+| `POST /summary` | same as `/alerts` | risk + restoration + guidance + alerts in one call (one premise-table read, plus one alerts-table read for the sign-up) |
 
 Inputs
 
@@ -36,6 +42,13 @@ Inputs
 - `message_type`: `pre_storm`, `outage_confirmed`, `estimate_updated`, `restoration_complete`.
   `channel`: `sms` (default), `push`, `email`, `voice`.
 - `prior_estimate`: `{"low_hours", "high_hours"}` for `estimate_updated`.
+- `hours_until_storm`: whole number 0 to 168. Each pre-storm lead time becomes `scheduled`, `send_now` (one catch-up alert)
+  or `skipped`. `hours_since_last_update`: whole number 0 to 168, checked against the level's minimum gap between updates.
+  `opt_in`: true to opt in to storm alerts at the basic level (an enrolled customer who kept `pre_storm` counts as opted in).
+- `event` (simulate): one of the four `message_type` values.
+- `channels` on `/alerts/enroll`: 1 to 4 items, one per type (`sms`, `voice`, `push`, `email`).
+  Phones must be fictional (`555-0100` to `555-0199`), emails must be at `example.com`, `.org`, `.net`, or end in `.test` or
+  `.invalid`, and `push` takes the value `app`. Anything else returns 400 with a demo-only message.
 
 Example
 
@@ -64,12 +77,74 @@ Every number comes from deterministic Python. The language model only phrases `/
   repeat `p50_hours`, `p50_hours` and `p90_hours` for alerts, guidance and messages until they read the new fields.
   `RESTORATION_ENGINE=v1` selects the first, analytic version (no `damage_count`).
 - **Guidance** (`concierge/guidance`): fixed rule library. Safety items are always first and marked `safety: true`.
-- **Alerts** (`concierge/alerts`): documented rules R1 to R10 with the rule id and reason in every decision.
-  Escalations are recommendations for a person, never automatic actions.
+- **Alerts** (`concierge/alerts`): a rules table (`rules_table.json`, versioned and hashed) turns risk band, expected
+  duration and declared needs into an alert level (`info`, `standard`, `elevated`, `priority`), pre-storm timing, update
+  cadence, channel order and escalation recommendations. Every output names the rule that produced it, and every decision
+  is written to the audit log. The rules and levels are prototype assumptions, not utility policy. Escalations are
+  recommendations for a person, never automatic actions.
 - **Messages** (`concierge/messages`): code builds a fact card; the model (Amazon Nova 2 Lite on Bedrock) rewrites it;
   a guard then checks the draft. Any number not in the fact card, link, promise, weather claim, claim about the past,
   or over-length text sends the request back to the fixed template. A Bedrock error does the same. The 911 safety line
   is appended by code after the guard.
+- **Assistant** (`concierge/assistant`): one fact card (`factcard-v1`) feeds eight prompts. The model sees no digit and
+  no token; it writes `{{range}}` placeholders that code fills in, so one draft can be cached for a whole bucket of
+  customers. A stricter guard than the one for messages checks every draft, and any failure, timeout, throttling or an open
+  circuit breaker returns the code-built fallback. Safety text is added by code and asserted present. `/messages` is unchanged.
+
+## Assistant (`POST /assistant`)
+
+One route for eight kinds of text. `kind` is one of `explanation`, `prep_before`, `actions_during`, `actions_after`,
+`msg_pre_storm`, `msg_outage_confirmed`, `msg_estimate_updated`, `msg_restoration_complete`. `channel` (`sms`, `push`,
+`email`, `voice`; default `sms`) matters for the message kinds. `stage` (`before`, `during`, `after`) is read only by
+`explanation`; every other kind has a fixed stage. `prior_estimate` (`{low_hours, high_hours}`) is read only by
+`msg_estimate_updated`. `use_llm` (default `true`) set to `false` skips the model and the cache. Every field is a closed enum,
+a whole-number range, or a true/false value. No field takes free text, and the premise token never reaches a prompt.
+
+Response:
+
+```json
+{
+  "engine_version": "assistant-v1", "kind": "prep_before", "stage": "before",
+  "sections": {
+    "confirmed_facts": [],
+    "confirmed_note": "No confirmed utility information is connected to this prototype.",
+    "model_estimates": [{"id": "range", "text": "Restoration, if you lose power: about 6 to 14 hours.", "label": "estimate, not confirmed"}],
+    "customer_actions": [{"id": "downed_lines", "text": "...", "safety": true}, {"id": "charge_devices", "text": "...", "safety": false}]
+  },
+  "text": "...", "safety": [{"id": "downed_lines", "text": "..."}],
+  "source": "model", "model_id": "...", "prompt_version": "prep_before.v1", "prompt_hash": "sha256:...",
+  "guard": {"checked": true, "passed": true, "reasons": []},
+  "cache": {"hit": false, "key": "sha256:..."},
+  "facts_used": {"band": "Medium", "confidence": "Medium", "scenario": "a typical storm", "range": "about 6 to 14 hours"},
+  "note": "Times are model estimates, not confirmed by the utility."
+}
+```
+
+- `source` is `model`, `cache` (a guard-passed draft reused, with this customer's own numbers filled in) or `template`
+  (the code-built fallback). `guard.reasons` says why a draft or the model was not used, in fixed phrases that never quote the draft.
+- For the three item kinds (`prep_before`, `actions_during`, `actions_after`), `text` is the introduction and the items are in
+  `sections.customer_actions`: safety items first (`safety: true`), then the items code selected (the model may rephrase them but
+  not add, drop or reorder them), then need-specific items verbatim. `model_estimates` and `customer_actions` never share a list.
+- `confirmed_facts` is always empty in this prototype. `model_estimates` is empty when the premise cannot be rated.
+- The model never writes a number: it writes `{{range}}` and `{{prior_range}}` and code fills them in after the guard passes.
+  Safety text (downed lines, generator and carbon monoxide, 911, reporting an outage) is added by code and checked to be present.
+  `UTILITY_OUTAGE_CONTACT` may name a verified outage line or app; unset, the text says "your utility's official outage line or app".
+- A well-formed token that is not in the premise table gets the insufficient-data fallback and no model call.
+- Logs hold the kind, source, guard reasons, cache hit and latency only. They never hold the token, a draft or the final text.
+
+## Demo-only sign-up, mock delivery and audit
+
+- **Nothing is ever sent.** There is no SMS, voice, push or email integration, and the Lambda role has no permission to
+  send. `POST /alerts/simulate` writes a mock message to an outbox with `status: "not_sent_demo"`.
+- **No real personal data.** Sign-up accepts only fictional contacts. Names, addresses and free text are rejected.
+  Contact values are stored for 24 hours, returned masked (`***-0123`), and never logged.
+- **Audit log.** Each evaluation, simulation, sign-up and removal writes one entry (decision id, time, route, token,
+  rules-table hash, inputs, rules fired, outputs) kept for 7 days. Entries never hold contacts or message text. Declared
+  needs appear only as two true/false values (any need, medical equipment).
+- **No authentication.** The sign-up, simulate and audit routes have none. Anyone who holds an opaque premise token can read
+  that token's audit entries. This is acceptable for a demo only. Put an authorizer in front before any real use.
+- Storage is the `aep-demo-alerts` DynamoDB table (key `token` + `sk`, TTL attribute `ttl`) when `ENROLL_TABLE` is set,
+  and process memory otherwise (local runs, tests). A failed audit write is logged and does not block the answer.
 
 ## What is never returned
 
@@ -88,3 +163,5 @@ they leave the Lambda.
 - Premises on very small lines, or with no damage history, return `status: insufficient_data` with a plain-language
   fallback instead of a number.
 - No weather data, live crew locations or road conditions are used.
+- Alert timing has no quiet hours because no time zone is known. Estimate-updated rules need the caller to supply the
+  earlier estimate (`prior_typical_hours`).

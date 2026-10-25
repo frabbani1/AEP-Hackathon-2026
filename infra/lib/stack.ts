@@ -32,6 +32,17 @@ export class ConciergeStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY, // the table is rebuilt from the clean bucket by `make load-table`
     });
 
+    // Demo-only sign-ups, mock outbox messages and the alert audit log (spec-05). Rows expire on their own (ttl).
+    // Documents hold only fictional contacts and no message delivery happens anywhere in this stack.
+    const alertsTable = new dynamodb.Table(this, "AlertsTable", {
+      tableName: "aep-demo-alerts",
+      partitionKey: { name: "token", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: "ttl",
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
     const cleanBucket = s3.Bucket.fromBucketName(this, "CleanBucket", props.cleanBucketName);
 
     // The role is created by scripts/setup_iam.sh (least privilege, read-only). CDK only uses it.
@@ -59,6 +70,7 @@ export class ConciergeStack extends cdk.Stack {
       logGroup,
       environment: {
         TABLE_NAME: table.tableName,
+        ENROLL_TABLE: alertsTable.tableName,
         CLEAN_BUCKET: cleanBucket.bucketName,
         BEDROCK_MODEL_ID: props.bedrockModelId,
         POWERTOOLS_LOG_LEVEL: "INFO",
@@ -67,7 +79,7 @@ export class ConciergeStack extends cdk.Stack {
 
     const api = new apigw.HttpApi(this, "HttpApi", {
       apiName: "aep-concierge-api",
-      description: "Outage risk, restoration, guidance, alerts and messages (demo, no authorizer)",
+      description: "Outage risk, restoration, guidance, alerts and messages (demo, no authorizer, mock delivery only)",
       corsPreflight: {
         allowOrigins: ["*"],
         allowMethods: [apigw.CorsHttpMethod.GET, apigw.CorsHttpMethod.POST, apigw.CorsHttpMethod.OPTIONS],
@@ -80,9 +92,14 @@ export class ConciergeStack extends cdk.Stack {
     // rewriting the URL. The handler strips the /api prefix.
     for (const prefix of ["", "/api"]) {
       api.addRoutes({ path: `${prefix}/health`, methods: [apigw.HttpMethod.GET], integration });
-      for (const route of ["risk", "restoration", "guidance", "alerts", "messages", "summary"]) {
+      for (const route of ["risk", "restoration", "guidance", "alerts", "messages", "summary", "assistant",
+        "alerts/enroll", "alerts/unenroll", "alerts/simulate"]) {
         api.addRoutes({ path: `${prefix}/${route}`, methods: [apigw.HttpMethod.POST], integration });
       }
+      api.addRoutes({ path: `${prefix}/alerts/audit`, methods: [apigw.HttpMethod.GET], integration });
+      // Backtest verdicts and limits (spec-04). Read-only aggregates; answers "unavailable" until a reviewed
+      // backtest.json is uploaded to serving/backtest/.
+      api.addRoutes({ path: `${prefix}/evidence`, methods: [apigw.HttpMethod.GET], integration });
     }
     // Light throttle so a runaway client cannot run up Bedrock calls. Not authentication.
     const stage = api.defaultStage!.node.defaultChild as apigw.CfnStage;
@@ -138,6 +155,7 @@ export class ConciergeStack extends cdk.Stack {
       value: `arn:aws:cloudfront::${this.account}:distribution/${distribution.distributionId}`,
     });
     new cdk.CfnOutput(this, "TableName", { value: table.tableName });
+    new cdk.CfnOutput(this, "AlertsTableName", { value: alertsTable.tableName });
     new cdk.CfnOutput(this, "WebBucketName", { value: webBucket.bucketName });
     new cdk.CfnOutput(this, "FunctionName", { value: fn.functionName });
   }

@@ -11,7 +11,11 @@ pipeline/**/*.egg-info/
 pipeline/.pytest_cache/
 
 # derived build outputs (may be large; regenerate with scripts/build_risk_artifacts.py)
-artifacts/
+# The aggregate backtest report and plots stay reviewable; sample runs and raw per-circuit output never are.
+artifacts/*
+!artifacts/backtest/
+artifacts/backtest/sample/
+artifacts/backtest/raw/
 # frontend
 frontend/node_modules/
 frontend/dist/

@@ -47,8 +47,10 @@ The engine SHALL return, for pre-storm, outage-confirmed, estimate-updated, and 
 whether the customer is eligible, the rule id, and a plain reason. Pre-storm is eligible at tiers `standard` and above;
 at tier `info` it is sent only if the customer opted in. Outage-confirmed and restoration-complete are eligible for every
 enrolled customer. Estimate-updated is eligible only when the typical estimate changed by at least
-`max(2, 0.25 x prior)` hours and the tier's minimum gap since the last update has passed. `qualifies` SHALL be true when
-any type other than restoration-complete is eligible.
+`max(2, 0.25 x prior)` hours and the tier's minimum gap since the last update has passed. When no earlier estimate is
+supplied there is nothing to compare, so the customer is eligible to receive updates and the reason says the change
+threshold applies once there is an earlier estimate. `qualifies` SHALL be true when pre-storm alerts are eligible; outage and
+restoration alerts are available to every enrolled customer, and the response SHALL say so.
 
 #### Scenario: Low-risk customer without needs does not get pre-storm alerts
 - **WHEN** the band is Low, the duration is short, and no needs are declared
@@ -57,6 +59,18 @@ any type other than restoration-complete is eligible.
 #### Scenario: Small estimate change is not worth a message
 - **WHEN** the typical estimate moves from 10 hours to 11 hours
 - **THEN** estimate-updated is not eligible and the reason says the change is too small
+
+#### Scenario: Qualifies means storm alerts
+- **WHEN** the customer is Low risk with no needs and has not opted in
+- **THEN** `qualifies` is false and the response says outage and restoration alerts are still available to enrolled customers
+
+#### Scenario: Opting in qualifies a basic-level customer
+- **WHEN** the same customer sets `opt_in = true`
+- **THEN** pre-storm is eligible with rule `K-pre-optin` and `qualifies` is true
+
+#### Scenario: No earlier estimate
+- **WHEN** no prior estimate is supplied
+- **THEN** estimate-updated is eligible and the reason says updates are sent when the estimate changes by a meaningful amount
 
 #### Scenario: Unrated premise still gets a general alert
 - **WHEN** the premise cannot be rated
@@ -79,8 +93,9 @@ single smallest lead time already reached, and `skipped` for the others; at `hou
 ### Requirement: Channel selection
 The engine SHALL order channels by tier from the table and SHALL use only channels the customer has enrolled or
 supplied. If the customer declared a medical-equipment need and has no voice channel, the response SHALL recommend adding
-one without adding it. If no channel is enrolled, the response SHALL say messages appear in the app only. Unknown channels
-SHALL be rejected with a 400.
+one without adding it. If an empty channel list is supplied, the response SHALL say messages appear in the app only. If no channel
+list is supplied and the customer has no enrollment, the response SHALL suggest the top two channels for the tier and say they are
+suggestions. Unknown channels SHALL be rejected with a 400.
 
 #### Scenario: Voice first at priority
 - **WHEN** the tier is `priority` and the customer has `sms`, `voice`, and `email`
@@ -93,7 +108,7 @@ SHALL be rejected with a 400.
 ### Requirement: Escalation triggers
 The engine SHALL return escalation recommendations from the table: customer care follow-up when `p50_hours >= 24`,
 priority outreach for a declared medical-equipment need with `p50_hours >= 4` or an Unrated premise, community resource
-information when `p90_hours >= 72`, human review when `p90_hours / p50_hours > 3`, and resource outreach for any declared need
+information when `p90_hours >= 72`, human review when `p90_hours / p50_hours > 4` and `p90_hours - p50_hours >= 24`, and resource outreach for any declared need
 when `p50_hours >= 24`. Each item SHALL be worded as a recommendation for a person and MUST NOT trigger any automatic action.
 
 #### Scenario: Long outage with a medical need
@@ -101,8 +116,12 @@ when `p50_hours >= 24`. Each item SHALL be worded as a recommendation for a pers
 - **THEN** escalation includes E1 and E2 and each has `action` and a plain `reason`
 
 #### Scenario: Wide range needs review
-- **WHEN** `p50_hours = 4` and `p90_hours = 14`
+- **WHEN** `p50_hours = 3` and `p90_hours = 30`
 - **THEN** escalation includes E4
+
+#### Scenario: A range that is wide only by rounding is not escalated
+- **WHEN** `p50_hours = 2` and `p90_hours = 9`, or `p50_hours = 4` and `p90_hours = 14`
+- **THEN** escalation does not include E4, because E4 needs both a P90/P50 ratio above 4 and a gap of at least 24 hours
 
 #### Scenario: Escalation is advisory
 - **WHEN** an escalation is returned

@@ -1,0 +1,5 @@
+Task: explain the result in the card to the customer.
+
+Cover, in this order and only if the card has it: the risk band in plain words (band_word is the chance of losing power in their area, not how strong the storm is), how confident the rating is, the one to three main factors, the stated assumptions, what data is missing, and what could change the answer. If the card has a range, say that if they lose power the model estimates restoration could take {{range}}, and that this is an estimate. Keep it brief: at most six short sentences and under about five hundred characters in total, written as one block of text. Lead with the band and the confidence, then the main factor, then the estimate if there is one, then one thing that could change the answer. Leave out the rest.
+
+Output shape: {"text": "<the explanation>"}

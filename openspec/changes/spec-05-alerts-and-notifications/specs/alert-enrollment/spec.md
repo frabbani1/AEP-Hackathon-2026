@@ -69,6 +69,25 @@ MUST NOT import or call any SMS, voice, push, or email client. The Lambda role M
 - **WHEN** the IAM script and CDK stack are scanned
 - **THEN** none of the forbidden actions appear
 
+### Requirement: Simulation needs a sign-up and respects the customer's choices
+`POST /alerts/simulate` SHALL record a mock message only for a token that has an unexpired enrollment, only for a message type the
+customer chose (default: all four), and only when the evaluator says the event is eligible. Otherwise it SHALL record nothing, say
+why with a reason code (`not_enrolled`, `message_type_not_chosen`, `not_eligible`), and write an audit entry. The first recommended
+channel SHALL be used; with none enrolled the message goes to the app. Enrollment, unenrollment, and simulation SHALL reject a
+well-formed token that is not in the premise table.
+
+#### Scenario: Not signed up
+- **WHEN** a token with no enrollment is simulated
+- **THEN** the response has `recorded_in_outbox = false` and `reason_code = "not_enrolled"`, the outbox is empty, and one audit entry exists
+
+#### Scenario: Customer did not choose this message type
+- **WHEN** the customer enrolled with only `outage_confirmed` and `pre_storm` is simulated
+- **THEN** nothing is recorded and the reason code is `message_type_not_chosen`
+
+#### Scenario: Unknown location
+- **WHEN** a well-formed token that is not in the premise table tries to enroll
+- **THEN** the response is 400 and nothing is stored
+
 ### Requirement: Audit log of every alert decision
 The system SHALL write one audit entry per evaluation, simulation, enrollment, and unenrollment. Each entry SHALL contain a decision id,
 timestamp, route, premise token, engine version, rules-table hash, the inputs used (band, duration bucket, estimate hours, need
