@@ -16,6 +16,9 @@ fallback reason among its premises.
 `zones.json` is server-side only. It holds premise tokens, so it is never published to a browser. The zone id is an
 HMAC of the cell under the token salt (letters only), so it cannot be turned back into a cell. Responses carry the id, a generic name,
 the outline, the band and the confidence, nothing else.
+
+The display text is stored under `label`, not `name`: `scripts/validate.py` bans the key `name` from every published file
+(hospital and facility names).
 """
 from __future__ import annotations
 
@@ -112,7 +115,7 @@ def build_zone_doc(premises: Iterable[Mapping], rows: Mapping[str, Mapping], cel
     # Stable, readable names: north to south, then west to east.
     zones.sort(key=lambda z: (-round(z["_lat"], 3), z["_lng"], z["id"]))
     for i, z in enumerate(zones, start=1):
-        z["name"] = f"Area {i}"
+        z["label"] = f"Area {i}"
         del z["_lat"], z["_lng"]
     lngs = [pt[0] for z in zones for pt in z["ring"]]
     lats = [pt[1] for z in zones for pt in z["ring"]]
@@ -120,7 +123,7 @@ def build_zone_doc(premises: Iterable[Mapping], rows: Mapping[str, Mapping], cel
     bounds = [[round(min(lats) - pad, 3), round(min(lngs) - pad, 3)],
               [round(max(lats) + pad, 3), round(max(lngs) + pad, 3)]] if zones else None
     doc = {"version": ZONES_VERSION, "resolution": resolution, "min_homes": MIN_GROUP, "bounds": bounds,
-           "zones": [{k: z[k] for k in ("id", "name", "ring", "rep", "fb", "facility", "n")} for z in zones]}
+           "zones": [{k: z[k] for k in ("id", "label", "ring", "rep", "fb", "facility", "n")} for z in zones]}
     stats = {"zones": len(zones), "zones_unrated": sum(1 for z in zones if z["rep"] is None),
              "zones_skipped": skipped, "premises_in_zones": sum(z["n"] for z in zones)}
     return doc, stats
