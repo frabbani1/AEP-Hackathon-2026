@@ -12,7 +12,10 @@ Status: `curate-challenge-data` (offline data pipeline, 40/41 tasks; task 8.5, t
 review, is open), `spec-02-risk-engine` and `spec-03-restoration-engine` (7.4, removing the one-release `low/typical/high_hours`
 shim, waits for spec-05 and spec-06) are implemented. The frontend has two pages (chat home at `/`, outage
 map at `/map`, see `frontend/`). The map page runs on the real API (`POST /zones`, `POST /zones/assess`, `GET /evidence`,
-through `src/api/httpClient.ts`); the chat is still a mock because a typed city or ZIP does not map to a zone.
+through `src/api/httpClient.ts`). The chat also uses the real API: a typed city or ZIP goes to `POST /zones/find`
+(`backend/concierge/zones/places.py`, public place and ZIP tables for the Roanoke Valley only), and the answers come from
+`POST /zones/assess`. Areas are named for nearby places ("Salem"), not "Area 7"; `scripts/relabel_zones.py` renames an older `zones.json`.
+Anything outside that territory (an Ohio ZIP, say) answers "not covered". Only the chat page's storm summary is still a sample.
 Spec-05 (alerts) and spec-06 (assistant) are implemented; open items are listed in their `tasks.md` (team reviews, deploy-time checks).
 The two backends do not talk to each other yet (see "Circuit keys" and `pipeline/README.md`). Work is driven by
 OpenSpec changes in `openspec/changes/`.
@@ -49,7 +52,7 @@ Python Lambda, Bedrock, S3, CDK (TypeScript). Do not deploy cloud resources with
 | `backend/concierge/weather/` | Open-Meteo client (`openmeteo`, stdlib only), weather block (`summary`), gust-to-severity scale (`severity`, `anchors.json` from `scripts/calibrate_weather.py`). Used by `severity: "weather"` and `POST /weather`. Never reaches the model. Tests in `backend/tests/weather/` |
 | `backend/tests/restoration/` | Golden v1 tests, tree/jobs/scheduler/Monte Carlo/model/service tests, real-data checks (skipped without `artifacts/`) |
 | `scripts/profile_restoration.py` | Latency and scenario-table report for the restoration engine on the real artifacts |
-| `frontend/` | React + TS + Vite, styled after aepohio.com. Pages: chat home and outage map (Leaflet). `src/api/types.ts` is the UI contract; `src/api/httpClient.ts` calls the API (snake_case to camelCase); `src/api/mockClient.ts` is the chat stub. `VITE_API_URL` (default same-origin `/api`), `VITE_API_PROXY` (dev proxy target, default `http://127.0.0.1:8787`), `VITE_ASSISTANT_LLM=true` (ask Bedrock to phrase map text), `VITE_BASEMAP_URL` (empty = no tiles). `npm run dev` / `npm run build` |
+| `frontend/` | React + TS + Vite, styled after aepohio.com. Pages: chat home and outage map (Leaflet). `src/api/types.ts` is the UI contract; `src/api/httpClient.ts` calls the API (snake_case to camelCase); `src/api/mockClient.ts` is the storm-summary stub. Every link stays inside the app (no outside sites); pages are `/`, `/map`, `/safety`, `/about`. `VITE_API_URL` (default same-origin `/api`), `VITE_API_PROXY` (dev proxy target, default `http://127.0.0.1:8787`), `VITE_ASSISTANT_LLM=true` (ask Bedrock to phrase map text), `VITE_BASEMAP_URL` (empty = no tiles). `npm run dev` / `npm run build` |
 | `backend/concierge/zones/`, `backend/concierge/curate/zones.py` | Outage map zones. Builder (`curate/zones.py`, build time): H3 res-6 cells with 10+ premises, each rated through its median-risk premise, written to `artifacts/risk/zones.json` (server side only, holds tokens). Runtime: `zones/index.py` (load and validate), `zones/view.py` (engine output to the map's shapes). Routes `POST /zones`, `POST /zones/assess` in `api/service.py` |
 | `scripts/dev_api.py` | Serves the Lambda handler on `127.0.0.1:8787` from `artifacts/` (no AWS, no auth, one request at a time) for frontend development |
 | `backend/concierge/curate/` | Data curation: raw files -> clean Parquet/JSON tables (`artifacts/curated/`) |

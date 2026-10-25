@@ -15,9 +15,12 @@ Routes (POST unless noted; also reachable under /api/ when served through CloudF
   POST /assistant    {token, kind, channel?, stage?, severity?, needs?, use_llm?, prior_estimate?, ...}  eight kinds of text
   POST /summary      risk + restoration + guidance + alerts in one call
   POST /zones            {severity?}                     the outage map's areas with band and confidence
+  POST /zones/find       {query}                         the map area for a typed city or ZIP code (or "not covered")
   POST /zones/assess     {zone_id, severity?, needs?, crews?, access?, damage? | damage_count?, use_llm?}
                                                          all four answers for one area (no premise token leaves the server)
   POST /weather          {zone_id, as_of?}               current weather and forecast for an area, or a past date
+  POST /outlook          {query}                         forecast-only outlook for a US city or ZIP outside the outage
+                                                         data: prediction only, no risk band, restoration time or alerts
 
 severity may be "weather" on /zones and /zones/assess: storm strength then comes from Open-Meteo wind gusts at the
 area. as_of (YYYY-MM-DD, a past date) replays that date's weather instead of the live forecast.
@@ -36,7 +39,7 @@ log.setLevel(logging.INFO)
 
 MAX_BODY_BYTES = 8 * 1024
 ROUTES = {"risk", "restoration", "guidance", "alerts", "messages", "summary", "assistant", "alerts/enroll",
-          "alerts/unenroll", "alerts/simulate", "zones", "zones/assess", "weather"}
+          "alerts/unenroll", "alerts/simulate", "zones", "zones/find", "zones/assess", "weather", "outlook"}
 GET_ROUTES = {"alerts/audit"}
 _service: Concierge | None = None
 
@@ -65,13 +68,15 @@ def _build() -> Concierge:
 
         from ..alerts.stores import DynamoStore
         alert_store = DynamoStore(boto3.resource("dynamodb").Table(os.environ["ENROLL_TABLE"]))
-    weather = None
+    weather, geocoder = None, None
     if os.environ.get("WEATHER_ENABLED", "1") != "0":
+        from ..weather.geocode import Geocoder
         from ..weather.openmeteo import OpenMeteo
-        weather = OpenMeteo()
+        weather, geocoder = OpenMeteo(), Geocoder()
     return Concierge(store.load_rows(), store.load_calibration(), store.load_labor(), phraser, model_id,
                      alert_store=alert_store, evidence_loader=store.load_evidence, tree=tree,
-                     restoration_engine=engine, assistant=assistant, zones=store.load_zones(), weather=weather)
+                     restoration_engine=engine, assistant=assistant, zones=store.load_zones(), weather=weather,
+                     geocoder=geocoder)
 
 
 def service() -> Concierge:

@@ -5,14 +5,18 @@ import "./LocationScope.css";
 
 interface Props {
   location: string | null;
-  onChange: (location: string | null) => void;
+  /** The map area the location was matched to. */
+  areaName: string | null;
+  /** Resolves to a message to show beside the box when the location could not be used, or null when it worked. */
+  onChange: (location: string | null) => Promise<string | null>;
 }
 
-export function LocationScope({ location, onChange }: Props) {
+export function LocationScope({ location, areaName, onChange }: Props) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const result = parseLocation(draft);
     if (!result.ok) {
@@ -21,13 +25,17 @@ export function LocationScope({ location, onChange }: Props) {
     }
     setError(null);
     setDraft(result.value);
-    if (result.value !== location) onChange(result.value);
+    if (result.value === location) return;
+    setChecking(true);
+    const issue = await onChange(result.value);
+    setChecking(false);
+    if (issue) setError(issue);
   };
 
   const handleClear = () => {
     setDraft("");
     setError(null);
-    onChange(null);
+    void onChange(null);
   };
 
   return (
@@ -54,8 +62,8 @@ export function LocationScope({ location, onChange }: Props) {
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? "location-hint location-error" : "location-hint"}
             />
-            <button type="submit" className="btn btn-outline-danger scope__submit">
-              Set location
+            <button type="submit" className="btn btn-outline-danger scope__submit" disabled={checking}>
+              {checking ? "Checking…" : "Set location"}
             </button>
           </div>
           <p id="location-hint" className="scope__hint">
@@ -73,6 +81,7 @@ export function LocationScope({ location, onChange }: Props) {
             <PinIcon size={18} />
             <span>
               Scoped to <strong>{location}</strong>
+              {areaName && areaName !== location && <> &middot; {areaName} area</>}
             </span>
             <button type="button" className="scope__clear" onClick={handleClear}>
               <CloseIcon size={16} />

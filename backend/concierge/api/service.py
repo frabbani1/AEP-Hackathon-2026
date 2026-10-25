@@ -29,9 +29,12 @@ from ..risk.confidence import FALLBACK_MESSAGES, downgrade
 from ..risk.engine import RiskEngine
 from ..risk.schema import WhitelistError, _scan_strings
 from ..risk.tokens import TOKEN_RE
+from ..weather import outlook as wx_outlook
 from ..weather import severity as wx_severity
 from ..weather import summary as wx_summary
+from ..weather.geocode import GeocodeError, Geocoder
 from ..weather.openmeteo import OpenMeteo, WeatherError, snap_point
+from ..zones import places
 from ..zones import view as zone_view
 from ..zones.index import MIN_HOMES, ZONE_ID_RE, Zone, ZoneIndex
 
@@ -71,10 +74,11 @@ class Concierge:
                  evidence_loader: Callable[[], Mapping | None] | None = None,
                  tree: RestorationTree | None = None, restoration_engine: str | None = None,
                  assistant: Assistant | None = None, zones: ZoneIndex | None = None, weather: OpenMeteo | None = None,
-                 weather_anchors: Mapping | None = None):
+                 weather_anchors: Mapping | None = None, geocoder: Geocoder | None = None):
         self.rows, self.labor = rows, labor
         self.zones = zones
         self.weather = weather
+        self.geocoder = geocoder
         self._weather_anchors = weather_anchors
         self._layers: OrderedDict[Any, dict] = OrderedDict()
         self.assistant = assistant if assistant is not None else Assistant()      # no model unless one is passed in
@@ -594,6 +598,51 @@ class Concierge:
             wx["severity"] = sev
         return self._finish(wx)
 
+    @staticmethod
+    def _place_query(body: Mapping) -> str:
+        """The typed city or ZIP code, checked. Anything that looks like a street address is refused."""
+        query = body.get("query")
+        if not isinstance(query, str) or not query.strip():
+            raise BadRequest("Enter a city or a 5-digit ZIP code.")
+        if len(query) > places.MAX_QUERY_LENGTH:
+            raise BadRequest(f"Keep it under {places.MAX_QUERY_LENGTH} characters.")
+        if re.search(r"\d", query) and not re.fullmatch(r"\s*\d{5}(-\d{4})?\s*", query):
+            raise BadRequest("Enter a city or a 5-digit ZIP code. Please don't include a street address.")
+        return query
+
+    def outlook(self, body: Mapping) -> dict:
+        """Forecast-only outlook for a US city or ZIP code, for places that have no outage data. It carries no risk
+        band, no restoration time and no alert eligibility, and says so. The typed text goes to the place lookup
+        (Open-Meteo geocoding) and nowhere else; it is not stored, logged or echoed. Weather is asked for at the
+        place's coordinates rounded to the 0.05 degree grid."""
+        query = self._place_query(body)
+        if self.weather is None or self.geocoder is None:
+            raise Unavailable("The forecast-only outlook is turned off.")
+        try:
+            place = self.geocoder.lookup(query)
+        except GeocodeError as e:
+            log.warning("%s", e)
+            raise Unavailable("We couldn't look up that place right now. Try again in a minute.") from None
+        if place is None:
+            return self._finish({"status": "not_found", "source": wx_outlook.SOURCE})
+        try:
+            pt = snap_point(place.lat, place.lon)
+            wx = wx_summary.summarize(self._series([pt], None)[pt])
+        except (WeatherError, KeyError):
+            raise Unavailable("Weather could not be loaded right now. Try again in a minute.") from None
+        return self._finish({"status": "ok", **wx_outlook.build(place.name, wx, place.lat, place.lon)})
+
+    def zone_find(self, body: Mapping) -> dict:
+        """The map area for a typed city or ZIP code. The text is compared with public place and ZIP tables only; it is
+        not stored, not logged and not echoed back, and no premise token is involved."""
+        index = self._zone_index()
+        query = self._place_query(body)
+        triples = [(z.id, z.name, z.ring) for z in index]
+        found = places.locate(query, triples)
+        if found is None:
+            return self._finish({"status": "not_covered", "covered_places": places.covered_places(triples)})
+        return self._finish({"status": "found", **found})
+
     def _zone(self, body: Mapping) -> Zone:
         zid = body.get("zone_id")
         if not isinstance(zid, str) or not ZONE_ID_RE.match(zid):
@@ -685,6 +734,12 @@ class Concierge:
         elif route == "zones":
             _only(body, {"severity", "as_of"})
             return self.zone_layer(body)
+        elif route == "zones/find":
+            _only(body, {"query"})
+            return self.zone_find(body)
+        elif route == "outlook":
+            _only(body, {"query"})
+            return self.outlook(body)
         elif route == "zones/assess":
             _only(body, {"zone_id", "severity", "as_of", "crews", "access", "damage", "damage_count", "needs",
                          "use_llm"})

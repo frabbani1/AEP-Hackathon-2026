@@ -143,18 +143,13 @@ def readable_parquet(clean: Path) -> list[Path]:
     return out
 
 
-# Keys that look like a banned column but are not one in this file. zones.json labels each map area "Area 1", "Area 2";
-# the banned `name` column is for hospital and facility names.
-ALLOWED_JSON_KEYS = {"zones.json": frozenset({"name"})}
-
-
 def check_privacy(r: Report, clean: Path, raw_ids: set[str] | None) -> None:
     hits = []
     for p in readable_parquet(clean):
         hits += [f"{p.name}:{c}" for c in pq.read_schema(p).names if is_banned(c)]
     for p in clean.rglob("*.json"):
-        allowed = ALLOWED_JSON_KEYS.get(p.name, frozenset())
-        hits += [f"{p.name}:{k}" for k in set(json_keys(json.loads(p.read_text()))) if is_banned(k) and k not in allowed]
+        # zones.json names each map area with `label` ("Area 1"); `name` stays banned (it is the facility-name column).
+        hits += [f"{p.name}:{k}" for k in set(json_keys(json.loads(p.read_text()))) if is_banned(k)]
     for p in clean.rglob("*.jsonl"):
         keys = set()
         for line in open(p, encoding="utf-8"):

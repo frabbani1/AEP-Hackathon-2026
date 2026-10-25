@@ -41,7 +41,9 @@ export function AreaPicker({ zones, selectedId, onSelect }: Props) {
           Select an area
         </option>
         {GROUPS.map((group) => {
-          const inGroup = zones.filter((zone) => zone.band === group.band);
+          const inGroup = zones
+            .filter((zone) => zone.band === group.band)
+            .sort((a, b) => a.name.localeCompare(b.name));
           if (inGroup.length === 0) return null;
           return (
             <optgroup key={group.label} label={group.label}>

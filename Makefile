@@ -14,7 +14,7 @@ PY           ?= .venv/bin/python
 export AWS_REGION RAW_BUCKET CLEAN_BUCKET
 export AWS_DEFAULT_REGION := $(AWS_REGION)
 
-.PHONY: all ingest etl validate docs iam check-aws load-table deploy smoke burst
+.PHONY: all ingest etl validate docs iam check-aws load-table deploy publish-web smoke burst dev dev-api
 
 all: ingest etl validate docs
 
@@ -49,9 +49,20 @@ deploy: check-aws
 	cd infra && npm install --no-audit --no-fund && npx cdk deploy --require-approval never --outputs-file cdk-outputs.json
 	bash scripts/setup_iam.sh
 
+#   make publish-web  build the frontend, copy it to the web bucket, clear the CloudFront cache (needs a deployed stack)
+publish-web: check-aws
+	bash scripts/publish_web.sh
 smoke:
 	bash scripts/smoke.sh
 
 # 30 concurrent calls at the deployed assistant (spec-06 task 8.3). Calls Bedrock, so run it on purpose.
 burst:
 	$(PY) scripts/burst_test.py
+# ---- Local app (no AWS needed) -------------------------------------------------------------------------------------
+#   make dev      local API on :8787 plus the frontend on http://localhost:5173 (Ctrl-C stops both)
+#   make dev-api  just the local API; run `npm run dev` in frontend/ yourself
+dev-api:
+	$(PY) scripts/dev_api.py
+dev:
+	cd frontend && npm install --no-audit --no-fund
+	@trap 'kill 0' INT TERM EXIT; $(PY) scripts/dev_api.py & (cd frontend && npm run dev) & wait

@@ -14,8 +14,9 @@ home in the area, not the area as a whole. A zone with no rated premise is "unra
 fallback reason among its premises.
 
 `zones.json` is server-side only. It holds premise tokens, so it is never published to a browser. The zone id is an
-HMAC of the cell under the token salt (letters only), so it cannot be turned back into a cell. Responses carry the id, a generic name,
-the outline, the band and the confidence, nothing else.
+HMAC of the cell under the token salt (letters only), so it cannot be turned back into a cell. Responses carry the id, a
+display name, the outline, the band and the confidence, nothing else. The name comes from public place names near the
+cell's outline (`concierge.zones.places`), such as "Salem" or "East Roanoke". It uses no customer field.
 
 The display text is stored under `label`, not `name`: `scripts/validate.py` bans the key `name` from every published file
 (hospital and facility names).
@@ -34,6 +35,7 @@ from concierge.risk.config import RiskConfig
 from concierge.risk.features import raw_score
 from concierge.risk.schema import _IDENTIFIER
 from concierge.risk.tokens import get_salt
+from concierge.zones.places import name_zones
 
 ZONES_FILE = "zones.json"
 ZONES_VERSION = "zones-v1"
@@ -112,10 +114,11 @@ def build_zone_doc(premises: Iterable[Mapping], rows: Mapping[str, Mapping], cel
         zones.append({"id": zone_id(salt, cell), "ring": ring_lng_lat(cell), "rep": rep, "fb": fallback,
                       "facility": facility[cell], "n": len(tokens), "_lat": lat, "_lng": lng})
 
-    # Stable, readable names: north to south, then west to east.
+    # Stable order (north to south, then west to east) and readable names from public place names ("Salem", "East Roanoke").
     zones.sort(key=lambda z: (-round(z["_lat"], 3), z["_lng"], z["id"]))
-    for i, z in enumerate(zones, start=1):
-        z["label"] = f"Area {i}"
+    labels = name_zones(zones)
+    for z in zones:
+        z["label"] = labels[z["id"]]
         del z["_lat"], z["_lng"]
     lngs = [pt[0] for z in zones for pt in z["ring"]]
     lats = [pt[1] for z in zones for pt in z["ring"]]

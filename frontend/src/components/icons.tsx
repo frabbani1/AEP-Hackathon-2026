@@ -146,3 +146,13 @@ export const PhoneIcon = (p: IconProps) => (
     <path d="M6.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5.5 5.5L16 13l4 1.5v3a2 2 0 0 1-2 2A14 14 0 0 1 4.5 6a2 2 0 0 1 2-2z" />
   </Icon>
 );
+export const CloudIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M17.5 18H7a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 9.5a4.25 4.25 0 0 1 .5 8.5z" />
+  </Icon>
+);
+export const WindIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 9h10.5a2.5 2.5 0 1 0-2.4-3.2M3 13h14.5a2.5 2.5 0 1 1-2.4 3.2M3 17h6" />
+  </Icon>
+);

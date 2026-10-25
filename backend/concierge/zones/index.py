@@ -64,19 +64,12 @@ class ZoneIndex:
         ring = tuple((float(lng), float(lat)) for lng, lat in z["ring"])
         if len(ring) < 3 or any(not (-180 <= lng <= 180 and -90 <= lat <= 90) for lng, lat in ring):
             raise ZoneError("a zone outline needs at least 3 valid points")
-<<<<<<< HEAD
         # The area's display name is `label` in newer files and `name` in older ones. "name" is also the ETL's banned
         # column for facility names, which is why newer files moved off it.
         name = z.get("label", z.get("name"))
         if not isinstance(name, str) or not name:
             raise ZoneError("a zone needs a label")
         return Zone(zid, name, ring, rep, fb, bool(z["facility"]), homes)
-=======
-        label = z["label"] if "label" in z else z["name"]      # "name" is the pre-2026-10-25 key; validate.py now bans it
-        if not isinstance(label, str) or not label:
-            raise ZoneError("a zone needs a name")
-        return Zone(zid, label, ring, rep, fb, bool(z["facility"]), homes)
->>>>>>> origin/frontend-alignment
 
     def get(self, zone_id: object) -> Zone | None:
         return self._zones.get(zone_id) if isinstance(zone_id, str) else None

@@ -8,6 +8,7 @@ import { PrepareCard } from "./PrepareCard";
 import { RestorationCard } from "./RestorationCard";
 import { RiskCard } from "./RiskCard";
 import { TransparencyCard } from "./TransparencyCard";
+import { WeatherCard } from "./WeatherCard";
 
 interface Props {
   state: AssessmentState;
@@ -136,6 +137,8 @@ export function ZonePanel({
           </a>
         </section>
       )}
+
+      {data.weather && <WeatherCard weather={data.weather} />}
 
       {data.risk && <RiskCard risk={data.risk} severity={data.severity} />}
 

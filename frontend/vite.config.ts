@@ -5,7 +5,7 @@ import { defineConfig, loadEnv } from "vite";
 // (`scripts/dev_api.py`, port 8787). Point VITE_API_PROXY at another API to use that one instead. The API has no
 // authentication, so only proxy to a target you trust.
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const env = loadEnv(mode, ".", "VITE_");
   return {
     plugins: [react()],
     server: {

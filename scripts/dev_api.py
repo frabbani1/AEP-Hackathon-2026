@@ -25,12 +25,48 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 
+RISK_FILES = ("premise_risk.jsonl", "calibration.json", "restoration_tree.json", "zones.json")
+
+
+def first_with(candidates: list[Path], files: tuple[str, ...]) -> Path:
+    """The first folder that holds every file in `files` (so risk rows and zones always come from the same build).
+    When none is complete, the first candidate is returned and main() reports what is missing."""
+    return next((c for c in candidates if all((c / f).exists() for f in files)), candidates[0])
+
+
 def set_defaults(artifacts: Path) -> None:
-    risk, curated, backtest = artifacts / "risk", artifacts / "curated", artifacts / "backtest"
+    """Pick the artifact files. The full local build (`artifacts/local/`) wins over `artifacts/`, because
+    `artifacts/risk/` is often only premise_risk.jsonl and calibration.json. The backtest report is committed under
+    `artifacts/backtest/`, so it is found from either root. Any variable already set in the environment is kept."""
+    roots = [artifacts / "local", artifacts] if artifacts.name != "local" else [artifacts, artifacts.parent]
+    risk = first_with([r / "risk" for r in roots], RISK_FILES)
+    curated = first_with([r / "curated" for r in roots], ("labor_standards.json",))
+    backtest = first_with([r / "backtest" for r in roots], ("backtest.json",))
     for name, path in (("PREMISE_FILE", risk / "premise_risk.jsonl"), ("CALIBRATION_FILE", risk / "calibration.json"),
                        ("TREE_FILE", risk / "restoration_tree.json"), ("ZONES_FILE", risk / "zones.json"),
                        ("LABOR_FILE", curated / "labor_standards.json"), ("EVIDENCE_FILE", backtest / "backtest.json")):
         os.environ.setdefault(name, str(path))
+
+
+def trust_system_certs() -> None:
+    """python.org builds of Python on macOS ship without CA certificates, so the weather call to Open-Meteo fails with
+    CERTIFICATE_VERIFY_FAILED and every answer silently falls back to the default storm. Use the system bundle (or
+    certifi's) for this local server only. A bundle you set yourself is kept."""
+    if os.environ.get("SSL_CERT_FILE"):
+        return
+    import ssl
+    if ssl.get_default_verify_paths().cafile and Path(ssl.get_default_verify_paths().cafile).exists():
+        return
+    candidates = [Path("/etc/ssl/cert.pem"), Path("/opt/homebrew/etc/ca-certificates/cert.pem")]
+    try:
+        import certifi
+        candidates.insert(0, Path(certifi.where()))
+    except ImportError:
+        pass
+    for path in candidates:
+        if path.exists():
+            os.environ["SSL_CERT_FILE"] = str(path)
+            return
 
 
 def make_handler(lambda_handler):
@@ -70,6 +106,7 @@ def main() -> int:
     ap.add_argument("--assistant-model", action="store_true", help="call Bedrock (needs credentials and BEDROCK_MODEL_ID)")
     args = ap.parse_args()
     set_defaults(args.artifacts)
+    trust_system_certs()
     if not args.assistant_model:
         os.environ.pop("BEDROCK_MODEL_ID", None)
     missing = [os.environ[k] for k in ("PREMISE_FILE", "CALIBRATION_FILE", "TREE_FILE", "ZONES_FILE", "LABOR_FILE")
@@ -80,6 +117,8 @@ def main() -> int:
     from concierge.api.handler import lambda_handler, service
     service()                                    # load everything now, so the first request is not slow
     server = HTTPServer(("127.0.0.1", args.port), make_handler(lambda_handler))
+    print(f"zones: {os.environ['ZONES_FILE']}\nevidence: {os.environ['EVIDENCE_FILE']}"
+          f"{'' if Path(os.environ['EVIDENCE_FILE']).exists() else '  (missing: /evidence will be unavailable)'}")
     print(f"API on http://127.0.0.1:{args.port}  (try: curl -s -X POST localhost:{args.port}/zones -d '{{}}')")
     try:
         server.serve_forever()

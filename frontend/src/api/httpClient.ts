@@ -4,15 +4,17 @@ import type {
   DamageKind,
   DeclaredNeed,
   Evidence,
+  FindAreaResult,
   MapZonesRequest,
   MapZonesResponse,
+  OutlookResult,
   Scenario,
   ZoneAssessment,
   ZoneAssessmentRequest,
 } from "./types";
 
 /**
- * HTTP implementation of the map half of `ConciergeClient`, for the Concierge API (see docs/api.md).
+ * HTTP implementation of `ConciergeClient` (the map, the area lookup and the evidence), for the Concierge API (see docs/api.md).
  *
  * Base URL: `VITE_API_URL`, else same-origin `/api` (CloudFront routes `/api/*` to the API; the Vite dev server
  * proxies it to `scripts/dev_api.py`). The API has no authentication. It only ever sees opaque area ids, never a
@@ -115,9 +117,17 @@ async function call<T>(path: string, init: { method: "GET" | "POST"; body?: unkn
   return camelize<T>(await response.json());
 }
 
-type MapMethods = Pick<ConciergeClient, "getMapZones" | "getZoneAssessment" | "getEvidence">;
+type ApiMethods = Pick<ConciergeClient, "getMapZones" | "getZoneAssessment" | "getEvidence" | "findArea" | "getOutlook">;
 
-export const httpClient: MapMethods = {
+export const httpClient: ApiMethods = {
+  getOutlook(query, signal) {
+    return call<OutlookResult>("/outlook", { method: "POST", body: { query } }, signal);
+  },
+
+  findArea(query, signal) {
+    return call<FindAreaResult>("/zones/find", { method: "POST", body: { query } }, signal);
+  },
+
   getMapZones({ severity }: MapZonesRequest, signal) {
     return call<MapZonesResponse>("/zones", { method: "POST", body: { severity } }, signal);
   },

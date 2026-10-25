@@ -1,6 +1,6 @@
-import type { DamageKind, DeclaredNeed, Scenario, SeverityPreset } from "../api";
+import type { DamageKind, DeclaredNeed, Scenario, ScenarioPreset } from "../api";
 
-export const SEVERITY_STEPS: ReadonlyArray<{ id: SeverityPreset; label: string; hint: string }> = [
+export const SEVERITY_STEPS: ReadonlyArray<{ id: ScenarioPreset; label: string; hint: string }> = [
   {
     id: "sep-2024-like",
     label: "Like Sep 2024",
@@ -30,9 +30,12 @@ export const DAMAGE_MAX = 20;
 export const DAMAGE_COUNT_MIN = 1;
 export const DAMAGE_COUNT_MAX = 60;
 
-/** Crews match the API's own default, so the first answer is the model's unmodified one. */
+/**
+ * Crews match the API's own default. Storm strength starts on live weather, so the first thing a customer sees is
+ * what the forecast means for them. If weather cannot load, the API answers with the typical storm and says so.
+ */
 export const DEFAULT_SCENARIO: Scenario = {
-  severity: "typical",
+  severity: "weather",
   crews: 3,
   access: "normal",
   damageCount: null,

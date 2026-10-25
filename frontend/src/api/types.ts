@@ -1,9 +1,9 @@
 /**
  * Contract between the chat and map UI and the Concierge API.
  *
- * Keep the UI talking to `ConciergeClient` only. `httpClient.ts` implements the map methods against the real API
- * (`POST /zones`, `POST /zones/assess`, `GET /evidence`); `mockClient.ts` still stands in for the chat, which has no
- * backend yet. `api/index.ts` is the single place that picks between them.
+ * Keep the UI talking to `ConciergeClient` only. `httpClient.ts` implements the map and chat methods against the real
+ * API (`POST /zones`, `POST /zones/find`, `POST /zones/assess`, `GET /evidence`); `mockClient.ts` only supplies the
+ * storm summary, which has no backend yet. `api/index.ts` is the single place that picks between them.
  *
  * Privacy: never put street addresses, account numbers, premise IDs or other
  * internal identifiers into these types. Location is a city or ZIP the customer typed.
@@ -30,22 +30,28 @@ export type ChatRole = "user" | "assistant" | "notice";
 export interface ChatMessage {
   id: string;
   role: ChatRole;
+  /** Paragraphs are separated by a blank line. A paragraph whose lines all start with "- " is shown as a list. */
   content: string;
-  /** Assistant reply produced without live data. Rendered with a "Preview" label. */
-  isPreview?: boolean;
+  /** Built from the risk and restoration engines' answers. Rendered with a "Model estimate" label. */
+  isEstimate?: boolean;
+  /** A forecast-only outlook for a place with no outage data. Rendered in purple with a "Prediction only" label. */
+  isForecast?: boolean;
   isError?: boolean;
 }
 
-export interface AskRequest {
-  question: string;
-  /** City or ZIP the customer scoped the conversation to, if any. */
-  location: string | null;
+/** An area the customer's typed city or ZIP code was matched to. */
+export interface AreaRef {
+  zoneId: string;
+  zoneName: string;
 }
 
-export interface AssistantReply {
-  content: string;
-  isPreview: boolean;
-}
+/**
+ * Result of `POST /zones/find`. "not_covered" means the typed place or ZIP is outside the data, which only spans one
+ * service territory. `coveredPlaces` names the larger places inside it.
+ */
+export type FindAreaResult =
+  | (AreaRef & { status: "found"; match: "zip" | "place"; exact: boolean; nearby: AreaRef[] })
+  | { status: "not_covered"; coveredPlaces: string[] };
 
 /* -------------------------------------------------------------------------- */
 /* Outage map                                                                  */
@@ -64,7 +70,10 @@ export type RiskBand = "Low" | "Medium" | "High";
 export type ConfidenceLevel = "Low" | "Medium" | "High";
 
 /** Same ids as the risk engine's severity presets, in increasing order of strength. */
-export type SeverityPreset = "sep-2024-like" | "typical" | "feb-2025-like" | "beyond-observed";
+export type ScenarioPreset = "sep-2024-like" | "typical" | "feb-2025-like" | "beyond-observed";
+
+/** A preset the customer picks, or "weather": storm strength read from the live forecast (Open-Meteo wind gusts). */
+export type SeverityPreset = ScenarioPreset | "weather";
 
 export interface SeverityInfo {
   preset: SeverityPreset | "custom";
@@ -81,13 +90,87 @@ export type LatLngBounds = [[number, number], [number, number]];
 export interface MapZone {
   /** Opaque, browser-safe zone token. */
   id: string;
-  /** Friendly anonymous label such as "Area 7". */
+  /** Readable name from public place names near the area, such as "Salem" or "East Roanoke". Not a service location. */
   name: string;
   /** Outer ring of the generalized area. Not a service location. */
   ring: LngLat[];
   /** Null when there is not enough history to rate the area (see `ZoneAssessment.fallback`). */
   band: RiskBand | null;
   confidence: ConfidenceLevel | null;
+  /** Storm strength used for this area. Only present in weather mode, and only when weather loaded for the area. */
+  multiplier?: number;
+  /** Highest forecast gust at the area in the next 48 hours (mph). Weather mode only. */
+  peakGustMph?: number;
+}
+
+/** Why the storm strength is what it is. Shared by the map-wide summary and the per-area block. */
+export interface WeatherSeverityMethod {
+  method?: string;
+  anchors?: { storm: string; peakGustMph: number; multiplier: number }[];
+}
+
+/** Map-wide weather summary returned by `POST /zones` in weather mode. */
+export interface WeatherSummary {
+  status: "ok" | "unavailable";
+  source: string;
+  /** Open-Meteo requires this credit to be shown. */
+  attribution: string;
+  basis?: string;
+  kind?: "live" | "historical";
+  areasTotal?: number;
+  areasWithoutWeather?: number;
+  peakGustMphMin?: number;
+  peakGustMphMax?: number;
+  severity: WeatherSeverityMethod & {
+    source: "weather" | "scenario_default";
+    multiplierMin?: number;
+    multiplierMax?: number;
+  };
+  /** Set when weather could not be loaded and the default typical storm was used instead. */
+  reason?: string;
+  notice?: string;
+}
+
+export interface WeatherHazard {
+  id: string;
+  level: "elevated" | "severe";
+  /** False means it is shown for awareness and does not move the risk rating. */
+  modelled: boolean;
+  text: string;
+}
+
+export interface WeatherPeriod {
+  peakGustMph: number | null;
+  peakGustTime: string | null;
+  precipIn: number | null;
+  snowIn: number | null;
+  minTempF: number | null;
+  maxTempF: number | null;
+}
+
+/** Per-area weather block on `POST /zones/assess`. */
+export interface ZoneWeather {
+  status: "ok" | "unavailable";
+  source: string;
+  attribution: string;
+  basis?: string;
+  kind?: "live" | "historical";
+  fetchedAt?: string;
+  reason?: string;
+  notice?: string;
+  current?: {
+    tempF: number | null;
+    feelsLikeF: number | null;
+    windMph: number | null;
+    gustMph: number | null;
+    humidityPct: number | null;
+    conditions: string | null;
+  } | null;
+  recent24h?: WeatherPeriod | null;
+  ahead48h?: WeatherPeriod | null;
+  hazards?: WeatherHazard[];
+  severityWindow?: { label: string; peakGustMph: number | null; peakGustTime: string | null } | null;
+  severity: WeatherSeverityMethod & { source: "weather" | "scenario_default"; multiplier?: number };
 }
 
 export interface MapZonesRequest {
@@ -102,6 +185,8 @@ export interface MapZonesResponse {
   /** Smallest group of homes an area may represent. Shown in the privacy note. */
   minHomesPerArea: number;
   zones: MapZone[];
+  /** Present only when the request asked for weather mode. */
+  weather?: WeatherSummary;
 }
 
 export type DamageKind = "pole" | "fuse" | "primary" | "transformer" | "secondary";
@@ -275,6 +360,8 @@ export interface ZoneAssessment {
   transparency: Transparency;
   /** Set when the model cannot make a reliable prediction. */
   fallback: { reasonCode: string; message: string } | null;
+  /** Present only in weather mode. */
+  weather?: ZoneWeather;
 }
 
 /** Aggregate backtest results from `GET /evidence`. Two past storms, circuit level, no identifiers. */
@@ -293,9 +380,75 @@ export interface Evidence {
   limits: string[];
 }
 
+/* -------------------------------------------------------------------------- */
+/* Forecast-only outlook (`POST /outlook`)                                     */
+/*                                                                             */
+/* For a city or ZIP code outside the outage data. It is a prediction from the */
+/* weather forecast alone: no risk band, no restoration time, no alert         */
+/* eligibility. The UI shows it in its own purple, never in the risk colors.   */
+/* -------------------------------------------------------------------------- */
+
+export type OutlookLevel = "quiet" | "watch" | "elevated" | "high";
+
+export interface OutlookHazard {
+  id: string;
+  level: "elevated" | "severe";
+  text: string;
+}
+
+export interface OutlookWeather {
+  status: "ok";
+  source: string;
+  attribution: string;
+  basis?: string;
+  current?: {
+    tempF: number | null;
+    feelsLikeF: number | null;
+    windMph: number | null;
+    gustMph: number | null;
+    conditions: string | null;
+  } | null;
+  ahead48h?: WeatherPeriod | null;
+}
+
+export interface WeatherOutlook {
+  status: "ok";
+  source: "forecast_only";
+  /** "Prediction only". */
+  label: string;
+  /** One sentence saying this is a prediction with no outage data behind it. */
+  notice: string;
+  place: { name: string };
+  /** A generalized hexagon around the place, drawn on the map in purple. Not a service location. */
+  area: { ring: LngLat[] };
+  outlook: {
+    level: OutlookLevel;
+    label: string;
+    /** Position on the four-step scale, 1 to `of`. Shown as a meter so color is never the only signal. */
+    steps: number;
+    of: number;
+    summary: string;
+    window: string | null;
+    peakGustMph: number | null;
+    peakGustTime: string | null;
+    method: string;
+  };
+  hazards: OutlookHazard[];
+  weather: OutlookWeather;
+  preparation: { safety: SafetyNotice[]; actions: { id: string; text: string }[] };
+  /** What this outlook deliberately does not provide. */
+  notAvailable: string[];
+}
+
+/** `POST /outlook` answers "not_found" (not an error) when no US place matches what was typed. */
+export type OutlookResult = WeatherOutlook | { status: "not_found" };
+
 export interface ConciergeClient {
   getEventSummary(location: string | null, signal?: AbortSignal): Promise<EventSummary>;
-  ask(request: AskRequest, signal?: AbortSignal): Promise<AssistantReply>;
+  /** Forecast-only outlook for a typed city or ZIP code. Rejects with an `ApiError` (400) for a street address. */
+  getOutlook(query: string, signal?: AbortSignal): Promise<OutlookResult>;
+  /** Match a typed city or ZIP code to a map area. Rejects with an `ApiError` (400) for a street address. */
+  findArea(query: string, signal?: AbortSignal): Promise<FindAreaResult>;
   getMapZones(request: MapZonesRequest, signal?: AbortSignal): Promise<MapZonesResponse>;
   getZoneAssessment(request: ZoneAssessmentRequest, signal?: AbortSignal): Promise<ZoneAssessment>;
   getEvidence(signal?: AbortSignal): Promise<Evidence>;

@@ -9,7 +9,7 @@ import type { useChat } from "../hooks/useChat";
 
 /** The chat home page. Conversation state lives in App so it survives a trip to the map. */
 export function ChatPage({ chat }: { chat: ReturnType<typeof useChat> }) {
-  const { messages, location, pending, send, setLocation } = chat;
+  const { messages, location, area, pending, send, setLocation } = chat;
   const summary = useEventSummary(conciergeClient, location);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -35,7 +35,7 @@ export function ChatPage({ chat }: { chat: ReturnType<typeof useChat> }) {
   return (
     <>
       <StormSummary state={summary} />
-      <LocationScope location={location} onChange={setLocation} />
+      <LocationScope location={location} areaName={area?.zoneName ?? null} onChange={setLocation} />
       <main id="main" className="app__main" tabIndex={-1}>
         <ChatThread messages={messages} pending={pending} onPrompt={handlePrompt} />
         <Composer location={location} pending={pending} inputRef={composerRef} onSend={(text) => void send(text)} />
